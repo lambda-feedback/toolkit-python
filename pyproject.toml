@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "lf_toolkit"
+version = "0.0.1"
+description = ""
+authors = ["Andreas Pfurtscheller <andreas.pfurtscheller23@imperial.ac.uk>"]
+readme = "README.md"
+packages = [{ include = "lf_toolkit" }]
+include = [{ path = "lf_toolkit/py.typed" }]
+
+[tool.poetry.dependencies]
+latex2sympy = { git = "https://github.com/purdue-tlt/latex2sympy.git", rev = "1.11.1" }
+antlr4-python3-runtime = "4.13.1"
+mpmath = "1.3.0"
+python = "^3.9"
+sympy = "1.12"
+typing_extensions = "4.10.0"
+lark = "^1.1.9"
+
+[tool.poetry.dev-dependencies]
+black = "24.2.0"
+flake8 = "7.0.0"
+isort = "5.13.2"
+pre-commit = "3.6.2"
+pytest = "8.1.1"
+pytest-cov = "4.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
