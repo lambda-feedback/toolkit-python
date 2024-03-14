@@ -42,7 +42,7 @@ jobs:
         if: steps.cache-poetry.outputs.cache-hit != 'true'
         uses: snok/install-poetry@v1
         with:
-          version: 1.8
+          version: ${{ env.POETRY_VERSION }}
 
       - name: Load cached venv
         id: cache-dependencies
