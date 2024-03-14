@@ -1,0 +1,94 @@
+name: "Python: Verify requirements.txt is clean"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "poetry.lock"
+  pull_request:
+    paths:
+      - "poetry.lock"
+
+jobs:
+  verify_requirements:
+    name: Verify requirements.txt clean
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      POETRY_VERSION: "1.8"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - name: Load cached Poetry installation
+        id: cache-poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: poetry-${{ env.POETRY_VERSION }}-${{ runner.os }}
+
+      - name: Install Poetry
+        if: steps.cache-poetry.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.8
+
+      - name: Export requirements.txt
+        run: poetry export -f requirements.txt -o requirements.txt
+
+      - id: verify_clean
+        name: Ensure requirements.txt is clean
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
+        run: ./scripts/ensure_git_clean.sh
+
+      - id: git_status
+        if: steps.verify_clean.outcome == 'failure'
+        name: Create Git Status Summary
+        run: |
+          delimiter="$(openssl rand -hex 8)"
+          echo "status<<${delimiter}" >> "$GITHUB_OUTPUT"
+          echo "$(git status --short)" >> "$GITHUB_OUTPUT"
+          echo "${delimiter}" >> "$GITHUB_OUTPUT"
+
+      - name: Comment PR on Failure
+        if: github.event_name == 'pull_request' && steps.verify_clean.outcome == 'failure'
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            # 😾 Verify requirements.txt Clean Report
+
+            ❌ requirements.txt out of sync.
+
+            poetry.lock has changed, but you likely forgot to update the requirements.txt file. Run `poetry export -o requirements.txt` and commit the changes!
+
+            **Dirty files**
+
+            ```
+            ${{ steps.git_status.outputs.status }}
+            ```
+          comment_tag: verify_requirements_clean
+
+      - name: Comment PR on Success
+        if: github.event_name == 'pull_request' && steps.verify_clean.outcome == 'success'
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            # 😻 Verify requirements.txt Clean Report
+
+            ✅ requirements.txt is clean.
+          comment_tag: verify_requirements_clean
+
+      - name: Exit on Failure
+        if: steps.verify_clean.outcome == 'failure'
+        run: exit 1
