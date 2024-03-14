@@ -12,6 +12,9 @@ on:
     paths-ignore:
       - "README.md"
 
+env:
+  POETRY_VERSION: "1.8.2"
+
 jobs:
   test:
     name: Test
@@ -19,8 +22,6 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.9"]
-    env:
-      POETRY_VERSION: "1.8.2"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -74,8 +75,6 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.9"]
-    env:
-      POETRY_VERSION: "1.8"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -97,7 +96,7 @@ jobs:
         if: steps.cache-poetry.outputs.cache-hit != 'true'
         uses: snok/install-poetry@v1
         with:
-          version: 1.8
+          version: ${{ env.POETRY_VERSION }}
 
       - name: Load cached venv
         id: cache-dependencies
