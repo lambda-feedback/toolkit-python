@@ -1,4 +1,5 @@
 from functools import cache
+from functools import lru_cache
 from os import path
 
 from lark import Lark
@@ -15,6 +16,10 @@ from .ast import Union
 
 
 class SetParser:
+
+    @lru_cache(maxsize=1)
+    def instance():
+        return SetParser()
 
     @cache
     def __parser(self, latex: bool = False) -> Lark:
