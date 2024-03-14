@@ -9,6 +9,9 @@ publish:
 test:
 	poetry run pytest --cov=lf_toolkit --cov-report=xml --cov-report=term tests/
 
+export:
+	poetry export -f requirements.txt -o requirements.txt
+
 clean_build:
 	rm -rf dist/
 	rm -rf build/

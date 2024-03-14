@@ -9,11 +9,9 @@ include = [{ path = "lf_toolkit/py.typed" }]
 
 [tool.poetry.dependencies]
 latex2sympy = { git = "https://github.com/purdue-tlt/latex2sympy.git", rev = "1.11.1" }
-antlr4-python3-runtime = "4.13.1"
-mpmath = "1.3.0"
+antlr4-python3-runtime = "^4.13"
 python = "^3.9"
-sympy = "1.12"
-typing_extensions = "4.10.0"
+sympy = "^1.12"
 lark = "^1.1.9"
 
 [tool.poetry.dev-dependencies]

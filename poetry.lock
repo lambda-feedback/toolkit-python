@@ -613,7 +613,7 @@ files = [
 name = "typing-extensions"
 version = "4.10.0"
 description = "Backported and Experimental Type Hints for Python 3.8+"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -645,4 +645,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "c219edc4c2f7f4b3e1c83ddccf87ccea5f1a97df0b807e6a894a9e79c0a1c059"
+content-hash = "388cdc3ed3ee18774d7b47094dfb215e6b7a6f5d0f02b2f9be10539077c555c9"
