@@ -10,3 +10,10 @@ class SymbolData:
 
 
 SymbolDict = Dict[str, SymbolData]
+
+
+@dataclass
+class Params:
+    is_latex: bool
+    simplify: bool
+    symbols: SymbolDict
