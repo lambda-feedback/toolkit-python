@@ -1,10 +1,9 @@
-from dataclasses import dataclass
 from typing import Dict
 from typing import List
+from typing import TypedDict
 
 
-@dataclass
-class SymbolData:
+class SymbolData(TypedDict):
     latex: str
     aliases: List[str]
 
@@ -12,8 +11,7 @@ class SymbolData:
 SymbolDict = Dict[str, SymbolData]
 
 
-@dataclass
-class Params:
+class Params(TypedDict):
     is_latex: bool
     simplify: bool
     symbols: SymbolDict

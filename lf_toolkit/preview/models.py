@@ -1,13 +1,11 @@
-from dataclasses import dataclass
+from typing import TypedDict
 
 
-@dataclass
-class Preview:
+class Preview(TypedDict):
     latex: str
     sympy: str
     feedback: str
 
 
-@dataclass
-class Result:
+class Result(TypedDict):
     preview: Preview
