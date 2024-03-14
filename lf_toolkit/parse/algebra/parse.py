@@ -1,6 +1,7 @@
-from .utils import SymbolDict
 from .parse_latex import parse_latex
 from .parse_sympy import parse_sympy
+from .utils import SymbolDict
+
 
 def parse_response(response_string: str, is_latex: bool, symbols: SymbolDict):
     if is_latex:
@@ -10,4 +11,3 @@ def parse_response(response_string: str, is_latex: bool, symbols: SymbolDict):
 
     # # TODO: don't allow all transformations
     # return parse_expr(input_string, transformations='all')
-

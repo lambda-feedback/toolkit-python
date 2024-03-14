@@ -1,13 +1,16 @@
 import re
 
-from sympy import Symbol, Basic
 from latex2sympy.latex2sympy import process_sympy as latex2sympy
+from sympy import Basic
+from sympy import Symbol
 
 from .utils import SymbolDict
+
 
 LATEX_SYMBOL_REGEX = re.compile(
     r"(?P<start>\\\(|\$\$|\$)(?P<latex>.*?)(?P<end>\\\)|\$\$|\$)"
 )
+
 
 def extract_latex(symbol):
     """Returns the latex portion of a symbol string.
@@ -37,8 +40,7 @@ def parse_latex(response: str, symbols: SymbolDict = {}) -> Basic:
             latex_symbol = latex2sympy(latex_symbol_str)
         except Exception:
             raise ValueError(
-                f"Couldn't parse latex symbol {latex_symbol_str} "
-                f"to sympy symbol."
+                f"Couldn't parse latex symbol {latex_symbol_str} " f"to sympy symbol."
             )
 
         sympy_symbol_map[latex_symbol] = Symbol(sym)
@@ -49,5 +51,3 @@ def parse_latex(response: str, symbols: SymbolDict = {}) -> Basic:
         expression = expression.pop()
 
     return expression.xreplace(sympy_symbol_map)
-
-

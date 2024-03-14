@@ -1,8 +1,18 @@
-from os import path
-from lark import Lark, Transformer
 from functools import cache
+from os import path
 
-from .ast import Set, Complement, Union, Intersection, Difference, SymmetricDifference, Term, Group
+from lark import Lark
+from lark import Transformer
+
+from .ast import Complement
+from .ast import Difference
+from .ast import Group
+from .ast import Intersection
+from .ast import Set
+from .ast import SymmetricDifference
+from .ast import Term
+from .ast import Union
+
 
 class SetParser:
 
@@ -22,6 +32,7 @@ class SetParser:
         ast = transformer.transform(tree)
 
         return ast
+
 
 class SetTransformer(Transformer):
     latex: bool
@@ -46,7 +57,7 @@ class SetTransformer(Transformer):
 
     def symmetric_difference(self, items):
         return SymmetricDifference(items[0], items[2])
-    
+
     def ID(self, items):
         return Term(items[0])
 

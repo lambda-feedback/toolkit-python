@@ -1,4 +1,6 @@
-from .ast import Set, SetTransformer
+from .ast import Set
+from .ast import SetTransformer
+
 
 class LatexPrinter(SetTransformer):
     def print(self, node: Set):
@@ -25,6 +27,7 @@ class LatexPrinter(SetTransformer):
     def Term(self, value):
         return value
 
+
 class ASCIIPrinter(SetTransformer):
     def print(self, node: Set):
         return self.transform(node)
@@ -49,6 +52,7 @@ class ASCIIPrinter(SetTransformer):
 
     def Term(self, value):
         return value
+
 
 class UnicodePrinter(SetTransformer):
     def print(self, node: Set):

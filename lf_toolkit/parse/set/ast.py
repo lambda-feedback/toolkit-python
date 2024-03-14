@@ -1,46 +1,58 @@
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 from dataclasses import dataclass
+
 
 @dataclass
 class Set:
     pass
 
+
 @dataclass
 class Group(Set):
     expr: Set
 
+
 @dataclass
 class UnaryOp(Set):
     expr: Set
+
 
 @dataclass
 class BinaryOp(Set):
     left: Set
     right: Set
 
+
 @dataclass
 class Complement(UnaryOp):
     pass
+
 
 @dataclass
 class Union(BinaryOp):
     pass
 
+
 @dataclass
 class Intersection(BinaryOp):
     pass
+
 
 @dataclass
 class Difference(BinaryOp):
     pass
 
+
 @dataclass
 class SymmetricDifference(BinaryOp):
     pass
 
+
 @dataclass
 class Term(Set):
     value: str
+
 
 class SetTransformer(ABC):
     def transform(self, node: Set):

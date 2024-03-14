@@ -1,5 +1,13 @@
-from sympy import SymmetricDifference, Union, Intersection, Complement, UniversalSet, FiniteSet, Symbol
+from sympy import Complement
+from sympy import FiniteSet
+from sympy import Intersection
+from sympy import Symbol
+from sympy import SymmetricDifference
+from sympy import Union
+from sympy import UniversalSet
+
 from .ast import SetTransformer
+
 
 class SymPyTransformer(SetTransformer):
     def Group(self, expr):

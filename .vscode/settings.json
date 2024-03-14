@@ -1,0 +1,22 @@
+{
+  "editor.rulers": [100],
+  "[python]": {
+    "editor.rulers": [88],
+    "editor.formatOnSave": true,
+    "editor.wordWrapColumn": 88
+  },
+  "[markdown]": {
+    "editor.rulers": [100],
+    "editor.unicodeHighlight.ambiguousCharacters": true,
+    "editor.unicodeHighlight.invisibleCharacters": true,
+    "editor.wordWrap": "bounded",
+    "editor.wordWrapColumn": 100
+  },
+  "[restructuredtext]": {
+    "editor.rulers": [100],
+    "editor.unicodeHighlight.ambiguousCharacters": true,
+    "editor.unicodeHighlight.invisibleCharacters": true,
+    "editor.wordWrap": "bounded",
+    "editor.wordWrapColumn": 100
+  }
+}
