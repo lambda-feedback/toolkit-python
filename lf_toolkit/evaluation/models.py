@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from dataclasses import field
 
 
 @dataclass
@@ -6,8 +7,8 @@ class Result:
     is_correct: bool = False
     latex: str = ""
     simplified: str = ""
-    _feedback: list = []
-    _feedback_tags: dict = {}
+    _feedback: list = field(default_factory=list)
+    _feedback_tags: dict = field(default_factory=dict)
 
     def get_feedback(self, tag):
         return self._feedback_tags.get(tag, None)
