@@ -4,25 +4,35 @@
 start: expression
 
 ?expression: base_expression
-           | "\\overline{" group "}" -> complement
-           | "\\bar{" term "}" -> complement
-           | expression union_op expression  -> union
-           | expression intersection_op expression  -> intersection
-           | expression difference_op expression  -> difference
-           | expression symmetric_difference_op expression -> symmetric_difference
+           | complement_expression
+           | ops_expression
 
-union_op: "\\cup"
-intersection_op: "\\cap"
-difference_op: "\\backslash"
-symmetric_difference_op: "\\triangle"
+?ops_expression: expression union_op expression  -> union
+               | expression intersection_op expression  -> intersection
+               | expression difference_op expression  -> difference
+               | expression symmetric_difference_op expression -> symmetric_difference
 
-bracket_left: "(" | "\\left("
-bracket_right: ")" | "\\right)"
+?union_op: "\\cup"
+?intersection_op: "\\cap"
+?difference_op: "\\backslash" | "\\setminus"
+?symmetric_difference_op: "\\triangle"
+
+?bracket_left: "(" | "\\left("
+?bracket_right: ")" | "\\right)"
 
 ?base_expression: group | term
+
+?complement_expression: complement_group | complement_term
+
+?complement_group: "\\overline{" complement_group "}" -> complement
+                 | base_expression
+                 | ops_expression
+
+?complement_term: "\\bar{" complement_term "}" -> complement
+          | term
 
 ?group: bracket_left expression bracket_right -> group
 
 ?term: ID
 
-ID: /[A-Za-z]+/
+ID: /[A-Z]/

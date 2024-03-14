@@ -1,5 +1,6 @@
 from functools import cache
 from functools import lru_cache
+from functools import reduce
 from os import path
 
 from lark import Lark
@@ -49,7 +50,9 @@ class SetTransformer(Transformer):
         return items[0]
 
     def complement(self, items):
-        return Complement(items[0])
+        return reduce(
+            lambda acc, _: Complement(acc), "'" if self.latex else items[1], items[0]
+        )
 
     def union(self, items):
         return Union(items[0], items[2])

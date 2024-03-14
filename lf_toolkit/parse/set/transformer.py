@@ -11,7 +11,7 @@ from .ast import SetTransformer
 
 class SymPyTransformer(SetTransformer):
     def Group(self, expr):
-        return expr
+        return (expr,)
 
     def Complement(self, expr):
         return Complement(UniversalSet, expr)

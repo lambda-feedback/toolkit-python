@@ -43,11 +43,13 @@ def parser():
         ("A symdiff B", SymmetricDifference(Term("A"), Term("B"))),
         # complements
         ("A'", Complement(Term("A"))),
+        ("A''", Complement(Complement(Term("A")))),
         # groups
         ("(A)", Group(Term("A"))),
         ("(A')", Group(Complement(Term("A")))),
         ("(A u B)", Group(Union(Term("A"), Term("B")))),
         ("(A)'", Complement(Group(Term("A")))),
+        ("(A)''", Complement(Complement(Group(Term("A"))))),
         # complex
         (
             "(A n B) u (C - D)",
@@ -73,6 +75,42 @@ def test_parse_ascii(input: str, expected: Set, parser: SetParser):
 @pytest.mark.parametrize(
     "input,expected",
     [
+        ("  A  ", Term("A")),
+        ("AnB", Intersection(Term("A"), Term("B"))),
+        (" A n  BuC", Union(Intersection(Term("A"), Term("B")), Term("C"))),
+    ],
+)
+def test_parse_ascii_ignore_whitespace(input: str, expected: Set, parser: SetParser):
+    result = parser.parse(input)
+
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "input",
+    [
+        # terms
+        "",
+        "a",
+        "AB",
+        # operators
+        "A n",
+        "'A",
+        "A N B",
+        "A U B",
+        # groups
+        "()",
+        "(A u B" "A u B)",
+    ],
+)
+def test_parse_invalid_ascii_fails(input: str, parser: SetParser):
+    with pytest.raises(Exception):
+        parser.parse(input)
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
         # terms
         ("A", Term("A")),
         # intersections
@@ -81,10 +119,17 @@ def test_parse_ascii(input: str, expected: Set, parser: SetParser):
         ("A \\cup B", Union(Term("A"), Term("B"))),
         # differences
         ("A \\backslash B", Difference(Term("A"), Term("B"))),
+        ("A \\setminus B", Difference(Term("A"), Term("B"))),
         # symmetric differences
         ("A \\triangle B", SymmetricDifference(Term("A"), Term("B"))),
         # complements
         ("\\bar{A}", Complement(Term("A"))),
+        ("\\bar{\\bar{A}}", Complement(Complement(Term("A")))),
+        ("\\overline{(A \\cup B)}", Complement(Group(Union(Term("A"), Term("B"))))),
+        (
+            "\\overline{\\overline{(A \\cup B)}}",
+            Complement(Complement(Group(Union(Term("A"), Term("B"))))),
+        ),
         # groups
         ("(A)", Group(Term("A"))),
         ("(\\bar{A})", Group(Complement(Term("A")))),
@@ -113,3 +158,30 @@ def test_parse_latex(input: str, expected: Set, parser: SetParser):
     result = parser.parse(input, latex=True)
 
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    "input",
+    [
+        # terms
+        "",
+        "a",
+        "AB",
+        # operators
+        "A \\cup",
+        "\\cap",
+        "\\triangle B" "A \\TRIANGLE B",
+        # groups
+        "\\bar{}",
+        "\\bar{()}",
+        "\\bar{A \\cup B}",
+        "\\bar{(A \\cup B)}",
+        "\\bar{\\overline{A}}",
+        "\\overline{}",
+        "\\overline{()}",
+        "\\overline{\\bar{A}}",
+    ],
+)
+def test_parse_invalid_latex_fails(input: str, parser: SetParser):
+    with pytest.raises(Exception):
+        parser.parse(input, latex=True)

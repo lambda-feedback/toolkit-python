@@ -10,14 +10,14 @@ start: expression
            | expression difference_op expression  -> difference
            | expression symmetric_difference_op expression -> symmetric_difference
 
-complement_op: "'"
-union_op: "union" | "u" | "uu" | "∪"
-intersection_op: "intersect" | "n" | "nn" | "∩"
-difference_op: "diff" | "without" | "-" | "\\"
-symmetric_difference_op: "symdiff" | "^" | "/\\" | "△"
+?complement_op: /'+/
+?union_op: "union" | "u" | "uu" | "∪"
+?intersection_op: "intersect" | "n" | "nn" | "∩"
+?difference_op: "diff" | "without" | "-" | "\\"
+?symmetric_difference_op: "symdiff" | "^" | "/\\" | "△"
 
 ?base_expression: "(" expression ")" -> group | term
 
 ?term: ID
 
-ID: /[A-Za-z]+/
+ID: /[A-Z]/
