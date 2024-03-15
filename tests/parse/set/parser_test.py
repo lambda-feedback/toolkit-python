@@ -4,6 +4,7 @@ from lf_toolkit.parse.set import Complement
 from lf_toolkit.parse.set import Difference
 from lf_toolkit.parse.set import Group
 from lf_toolkit.parse.set import Intersection
+from lf_toolkit.parse.set import ParseError
 from lf_toolkit.parse.set import Set
 from lf_toolkit.parse.set import SetParser
 from lf_toolkit.parse.set import SymmetricDifference
@@ -104,7 +105,7 @@ def test_parse_ascii_ignore_whitespace(input: str, expected: Set, parser: SetPar
     ],
 )
 def test_parse_invalid_ascii_fails(input: str, parser: SetParser):
-    with pytest.raises(Exception):
+    with pytest.raises(ParseError):
         parser.parse(input)
 
 
@@ -183,5 +184,5 @@ def test_parse_latex(input: str, expected: Set, parser: SetParser):
     ],
 )
 def test_parse_invalid_latex_fails(input: str, parser: SetParser):
-    with pytest.raises(Exception):
+    with pytest.raises(ParseError):
         parser.parse(input, latex=True)

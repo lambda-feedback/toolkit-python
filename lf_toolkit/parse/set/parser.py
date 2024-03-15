@@ -19,10 +19,15 @@ from .ast import Union
 
 
 class ParseError(Exception):
+    response: str
+
+    def __init__(self, response: str):
+        self.response = response
 
     def __str__(self):
         if isinstance(self.__cause__, UnexpectedInput):
-            return str(self.__cause__)
+            # TODO: check if we can also use `match_examples` to provide useful information?
+            return self.__cause__.get_context(response=self.response)
         else:
             return "Parse error"
 
@@ -50,7 +55,7 @@ class SetParser:
         try:
             return self.__parser(latex).parse(response, start="start")
         except LarkError as e:
-            raise ParseError() from e
+            raise ParseError(response=response) from e
 
 
 class SetTransformer(Transformer):
