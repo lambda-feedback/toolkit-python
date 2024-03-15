@@ -27,7 +27,7 @@ class ParseError(Exception):
     def __str__(self):
         if isinstance(self.__cause__, UnexpectedInput):
             # TODO: check if we can also use `match_examples` to provide useful information?
-            return self.__cause__.get_context(response=self.response)
+            return self.__cause__.get_context(text=self.response)
         else:
             return "Parse error"
 
