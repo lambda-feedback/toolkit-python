@@ -4,11 +4,11 @@
 start: expression
 
 ?expression: base_expression
-           | base_expression complement_op -> complement
-           | expression union_op expression  -> union
-           | expression intersection_op expression  -> intersection
-           | expression difference_op expression  -> difference
-           | expression symmetric_difference_op expression -> symmetric_difference
+           | complement_expression
+           | ops_expression
+
+?ops_expression: expression op expression -> operation
+?op: union_op | intersection_op | difference_op | symmetric_difference_op
 
 ?complement_op: /'+/
 ?union_op: "union" | "u" | "uu" | "∪"
@@ -16,8 +16,11 @@ start: expression
 ?difference_op: "diff" | "without" | "-" | "\\"
 ?symmetric_difference_op: "symdiff" | "^" | "/\\" | "△"
 
-?base_expression: "(" expression ")" -> group | term
+?base_expression: group | term
+
+?complement_expression: base_expression complement_op -> complement
+
+?group: "(" expression ")" -> group
 
 ?term: ID
-
 ID: /[A-Z]/

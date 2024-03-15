@@ -7,32 +7,63 @@ start: expression
            | complement_expression
            | ops_expression
 
-?ops_expression: expression union_op expression  -> union
-               | expression intersection_op expression  -> intersection
-               | expression difference_op expression  -> difference
-               | expression symmetric_difference_op expression -> symmetric_difference
+?ops_expression: expression op expression -> operation
+?op: union_op | intersection_op | difference_op | symmetric_difference_op
 
 ?union_op: "\\cup"
 ?intersection_op: "\\cap"
 ?difference_op: "\\backslash" | "\\setminus"
 ?symmetric_difference_op: "\\triangle"
 
-?bracket_left: "(" | "\\left("
-?bracket_right: ")" | "\\right)"
-
 ?base_expression: group | term
 
 ?complement_expression: complement_group | complement_term
-
-?complement_group: "\\overline{" complement_group "}" -> complement
-                 | base_expression
-                 | ops_expression
-
-?complement_term: "\\bar{" complement_term "}" -> complement
-          | term
+?complement_group: "\\overline{" (complement_group | base_expression | ops_expression) "}" -> complement
+?complement_term: "\\bar{" (complement_term | term) "}" -> complement
 
 ?group: bracket_left expression bracket_right -> group
+?bracket_left: "(" | "\\left("
+?bracket_right: ")" | "\\right)"
 
 ?term: ID
-
 ID: /[A-Z]/
+
+
+// %import common.WS
+// %ignore WS
+
+// start: expression
+
+// ?expression: base_expression
+//            | complement_expression
+//            | ops_expression
+
+// ?ops_expression: expression union_op expression  -> union
+//                | expression intersection_op expression  -> intersection
+//                | expression difference_op expression  -> difference
+//                | expression symmetric_difference_op expression -> symmetric_difference
+
+// ?union_op: "\\cup"
+// ?intersection_op: "\\cap"
+// ?difference_op: "\\backslash" | "\\setminus"
+// ?symmetric_difference_op: "\\triangle"
+
+// ?bracket_left: "(" | "\\left("
+// ?bracket_right: ")" | "\\right)"
+
+// ?base_expression: group | term
+
+// ?complement_expression: complement_group | complement_term
+
+// ?complement_group: "\\overline{" complement_group "}" -> complement
+//                  | base_expression
+//                  | ops_expression
+
+// ?complement_term: "\\bar{" complement_term "}" -> complement
+//           | term
+
+// ?group: bracket_left expression bracket_right -> group
+
+// ?term: ID
+
+// ID: /[A-Z]/

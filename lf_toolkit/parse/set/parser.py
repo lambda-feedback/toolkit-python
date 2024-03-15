@@ -4,7 +4,9 @@ from functools import reduce
 from os import path
 
 from lark import Lark
+from lark import LarkError
 from lark import Transformer
+from lark import UnexpectedInput
 
 from .ast import Complement
 from .ast import Difference
@@ -14,6 +16,15 @@ from .ast import Set
 from .ast import SymmetricDifference
 from .ast import Term
 from .ast import Union
+
+
+class ParseError(Exception):
+
+    def __str__(self):
+        if isinstance(self.__cause__, UnexpectedInput):
+            return str(self.__cause__)
+        else:
+            return "Parse error"
 
 
 class SetParser:
@@ -29,15 +40,17 @@ class SetParser:
         grammar_file_path = path.join(script_dir, "grammar", grammar_file_name)
 
         with open(grammar_file_path) as f:
-            return Lark(f)
+            return Lark(
+                grammar=f,
+                parser="lalr",
+                transformer=SetTransformer(latex),
+            )
 
     def parse(self, response: str, latex: bool = False) -> Set:
-        tree = self.__parser(latex).parse(response, start="start")
-
-        transformer = SetTransformer(latex)
-        ast = transformer.transform(tree)
-
-        return ast
+        try:
+            return self.__parser(latex).parse(response, start="start")
+        except LarkError as e:
+            raise ParseError() from e
 
 
 class SetTransformer(Transformer):
@@ -53,6 +66,18 @@ class SetTransformer(Transformer):
         return reduce(
             lambda acc, _: Complement(acc), "'" if self.latex else items[1], items[0]
         )
+
+    def operation(self, items):
+        if items[1].data == "union_op":
+            return self.union(items)
+        elif items[1].data == "intersection_op":
+            return self.intersection(items)
+        elif items[1].data == "difference_op":
+            return self.difference(items)
+        elif items[1].data == "symmetric_difference_op":
+            return self.symmetric_difference(items)
+        else:
+            raise ValueError(f"Unknown operation: {items[1].data}")
 
     def union(self, items):
         return Union(items[0], items[2])

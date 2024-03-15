@@ -77,7 +77,7 @@ def test_parse_ascii(input: str, expected: Set, parser: SetParser):
     [
         ("  A  ", Term("A")),
         ("AnB", Intersection(Term("A"), Term("B"))),
-        (" A n  BuC", Union(Intersection(Term("A"), Term("B")), Term("C"))),
+        (" A n  (BuC ) ", Intersection(Term("A"), Group(Union(Term("B"), Term("C"))))),
     ],
 )
 def test_parse_ascii_ignore_whitespace(input: str, expected: Set, parser: SetParser):
