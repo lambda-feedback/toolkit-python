@@ -49,7 +49,53 @@ def sympy_transformer():
             Complement(Term("A")),
             SymComplement(SymUniversalSet, SymFiniteSet(SymSymbol("A"))),
         ),
-        (Group(Term("A")), (SymFiniteSet(SymSymbol("A")),)),
+        (Group(Term("A")), SymFiniteSet(SymSymbol("A"))),
+        # ((A \ B) n (C \ (A u B)))'
+        (
+            # \overline{(A \setminus B) \cap (C \setminus (A \cup B))}
+            Complement(
+                Intersection(
+                    Difference(Term("A"), Term("B")),
+                    Difference(Term("C"), Union(Term("A"), Term("B"))),
+                )
+            ),
+            SymComplement(
+                SymUniversalSet,
+                SymIntersection(
+                    SymComplement(
+                        SymFiniteSet(SymSymbol("A")), SymFiniteSet(SymSymbol("B"))
+                    ),
+                    SymComplement(
+                        SymFiniteSet(SymSymbol("C")),
+                        SymUnion(
+                            SymFiniteSet(SymSymbol("A")), SymFiniteSet(SymSymbol("B"))
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        # A' u (B' n C') u (C n B)
+        (
+            Union(
+                Complement(Term("A")),
+                Union(
+                    Group(Intersection(Complement(Term("B")), Complement(Term("C")))),
+                    Group(Intersection(Term("C"), Term("B"))),
+                ),
+            ),
+            SymUnion(
+                SymComplement(SymUniversalSet, SymFiniteSet(SymSymbol("A"))),
+                SymUnion(
+                    SymIntersection(
+                        SymComplement(SymUniversalSet, SymFiniteSet(SymSymbol("B"))),
+                        SymComplement(SymUniversalSet, SymFiniteSet(SymSymbol("C"))),
+                    ),
+                    SymIntersection(
+                        SymFiniteSet(SymSymbol("C")), SymFiniteSet(SymSymbol("B"))
+                    ),
+                ),
+            ),
+        ),
     ],
 )
 def test_sympy_transformer(

@@ -11,7 +11,12 @@ from .ast import SetTransformer
 
 class SymPyTransformer(SetTransformer):
     def Group(self, expr):
-        return (expr,)
+        # TODO: sympy has no concept of parentheses for sets,
+        #       so we just return the child expression for now.
+        #       If we want to check correctness of parenthesis,
+        #       we probably need to check the syntax tree we're
+        #       building, not using sympy at all.
+        return expr
 
     def Complement(self, expr):
         return Complement(UniversalSet, expr)
