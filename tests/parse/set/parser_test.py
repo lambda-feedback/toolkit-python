@@ -10,6 +10,7 @@ from lf_toolkit.parse.set import SetParser
 from lf_toolkit.parse.set import SymmetricDifference
 from lf_toolkit.parse.set import Term
 from lf_toolkit.parse.set import Union
+from lf_toolkit.parse.set import Universe
 
 
 @pytest.fixture(scope="module")
@@ -22,6 +23,8 @@ def parser():
     [
         # terms
         ("A", Term("A")),
+        ("Omega", Universe()),
+        ("Ω", Universe()),
         # intersections
         ("A n B", Intersection(Term("A"), Term("B"))),
         ("A ∩ B", Intersection(Term("A"), Term("B"))),
@@ -114,6 +117,7 @@ def test_parse_invalid_ascii_fails(input: str, parser: SetParser):
     [
         # terms
         ("A", Term("A")),
+        ("\\Omega", Universe()),
         # intersections
         ("A \\cap B", Intersection(Term("A"), Term("B"))),
         # unions

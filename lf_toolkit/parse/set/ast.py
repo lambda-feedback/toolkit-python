@@ -9,6 +9,11 @@ class Set:
 
 
 @dataclass
+class NamedSet(Set):
+    name: str
+
+
+@dataclass
 class Group(Set):
     expr: Set
 
@@ -54,6 +59,10 @@ class Term(Set):
     value: str
 
 
+class Universe(Set):
+    pass
+
+
 class SetTransformer(ABC):
     def transform(self, node: Set):
         transformed_children = []
@@ -72,12 +81,12 @@ class SetTransformer(ABC):
             transformed_children.append(self.transform(node.right))
 
         # Dispatch to the specific transformation method based on node type
-        method_name = node.__class__.__name__
+        method_name = type(node).__name__
         transformer = getattr(self, method_name, self.__unhandled_node)
         return transformer(*transformed_children)
 
     def __unhandled_node(self, node: Set):
-        raise Exception(f"No transform method defined for {node.__class__.__name__}")
+        raise Exception(f"No transform method defined for {type(node).__name__}")
 
     @abstractmethod
     def Group(self, expr):
@@ -105,4 +114,8 @@ class SetTransformer(ABC):
 
     @abstractmethod
     def Term(self, value):
+        pass
+
+    @abstractmethod
+    def Universe(self):
         pass

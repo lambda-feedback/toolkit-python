@@ -7,6 +7,7 @@ from .ast import SetTransformer
 from .ast import SymmetricDifference
 from .ast import Term
 from .ast import Union
+from .ast import Universe
 from .parser import ParseError
 from .parser import SetParser
 from .printer import ASCIIPrinter

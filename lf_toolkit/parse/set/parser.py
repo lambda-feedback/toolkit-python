@@ -16,6 +16,7 @@ from .ast import Set
 from .ast import SymmetricDifference
 from .ast import Term
 from .ast import Union
+from .ast import Universe
 
 
 class ParseError(Exception):
@@ -98,6 +99,9 @@ class SetTransformer(Transformer):
 
     def ID(self, items):
         return Term(items[0])
+
+    def universe(self, _):
+        return Universe()
 
     def group(self, items):
         return Group(items[1] if self.latex else items[0])

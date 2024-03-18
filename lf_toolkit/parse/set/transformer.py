@@ -35,3 +35,6 @@ class SymPyTransformer(SetTransformer):
 
     def Term(self, expr):
         return FiniteSet(Symbol(expr))
+
+    def Universe(self):
+        return UniversalSet

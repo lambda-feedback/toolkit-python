@@ -27,6 +27,9 @@ class LatexPrinter(SetTransformer):
     def Term(self, value):
         return value
 
+    def Universe(self):
+        return "\\Omega"
+
 
 class ASCIIPrinter(SetTransformer):
     def print(self, node: Set):
@@ -53,6 +56,9 @@ class ASCIIPrinter(SetTransformer):
     def Term(self, value):
         return value
 
+    def Universe(self):
+        return "Omega"
+
 
 class UnicodePrinter(SetTransformer):
     def print(self, node: Set):
@@ -78,3 +84,6 @@ class UnicodePrinter(SetTransformer):
 
     def Term(self, value):
         return value
+
+    def Universe(self):
+        return "Ω"

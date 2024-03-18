@@ -25,5 +25,7 @@ start: expression
 ?bracket_left: "(" | "\\left("
 ?bracket_right: ")" | "\\right)"
 
-?term: ID
+?term: ID | universe
+
 ID: /[A-Z]/
+universe: "\Omega"

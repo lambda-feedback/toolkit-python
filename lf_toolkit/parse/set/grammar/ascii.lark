@@ -22,5 +22,7 @@ start: expression
 
 ?group: "(" expression ")" -> group
 
-?term: ID
+?term: ID | universe
+
 ID: /[A-Z]/
+universe: "Ω" | "Omega"
