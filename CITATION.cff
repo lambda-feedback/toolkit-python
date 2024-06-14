@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: Evaluation Function Toolkit for Python
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Andreas
+    family-names: Pfurtscheller
+    email: andreas.pfurtscheller23@imperial.ac.uk
+    affiliation: Imperial College London
+repository-code: 'https://github.com/lambda-feedback/toolkit-python'
+abstract: >-
+  The Evaluation Function Toolkit for Python is a collection of tools to
+  facilitate the creation of evaluation functions for educational purposes.
+  It is designed to be used in combination with the Lambda Feedback platform.
+keywords:
+  - python
+  - evaluation function
+  - lambda feedback
+  - education
+  - lms
