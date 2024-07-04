@@ -1,3 +1,8 @@
-# import importlib.metadata as importlib_metadata
+import importlib.metadata as importlib_metadata
 
-# __version__ = importlib_metadata.version("lf_toolkit")
+from .rpc import IPCServer
+from .rpc import StdioServer
+from .rpc import run
+
+
+__version__ = importlib_metadata.version("lf_toolkit")
