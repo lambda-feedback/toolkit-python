@@ -42,9 +42,6 @@ pywin32 = { version = "^306", platform = "win32", optional = true }
 # dev dependencies
 ##########################
 
-[tool.poetry.group.dev]
-optional = true
-
 [tool.poetry.group.dev.dependencies]
 black = "24.4.2"
 flake8 = "7.1.0"

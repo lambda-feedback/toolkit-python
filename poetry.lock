@@ -1813,4 +1813,4 @@ parsing = ["antlr4-python3-runtime", "lark", "latex2sympy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "a7bdcf2fc627e1233523f0bd7a7aae83c3c41c3a4a040c6e6108f885f3d9fe20"
+content-hash = "34103af2c9a4fd3e503d5474ee30ecb8c40ee1ee4a3e3aa7ef47e862c6c02d42"
