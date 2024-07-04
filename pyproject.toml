@@ -19,10 +19,33 @@ anyio = "4.4.0"
 jsonrpcserver = "5.0.9"
 
 ##########################
+# parsing dependencies
+##########################
+
+antlr4-python3-runtime = { version = "4.13", optional = true }
+lark = { version = "1.1.9", optional = true }
+latex2sympy = { git = "https://github.com/purdue-tlt/latex2sympy.git", rev = "1.11.2", optional = true }
+
+##########################
+# http / ws dependencies
+##########################
+
+fastapi = { version = "^0.111.0", optional = true }
+
+##########################
+# ipc dependencies
+##########################
+
+pywin32 = { version = "^306", platform = "win32", optional = true }
+
+##########################
 # dev dependencies
 ##########################
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
 black = "24.4.2"
 flake8 = "7.1.0"
 isort = "5.13.2"
@@ -31,37 +54,13 @@ pytest = "8.2.2"
 pytest-cov = "5.0.0"
 
 ##########################
-# parsing dependencies
+# extras
 ##########################
 
-[tool.poetry.group.parsing]
-optional = true
-
-[tool.poetry.group.parsing.dependencies]
-antlr4-python3-runtime = "4.13"
-lark = "1.1.9"
-latex2sympy = { git = "https://github.com/purdue-tlt/latex2sympy.git", rev = "1.11.2" }
-
-##########################
-# http / ws dependencies
-##########################
-
-[tool.poetry.group.http]
-optional = true
-
-[tool.poetry.group.http.dependencies]
-fastapi = "^0.111.0"
-
-##########################
-# ipc dependencies
-##########################
-
-[tool.poetry.group.ipc]
-optional = true
-
-[tool.poetry.group.ipc.dependencies]
-pywin32 = { version = "^306", platform = "win32" }
-
+[tool.poetry.extras]
+parsing = ["antlr4-python3-runtime", "lark", "latex2sympy"]
+ipc = ["pywin32"]
+http = ["fastapi"]
 
 [tool.isort]
 line_length = 88
