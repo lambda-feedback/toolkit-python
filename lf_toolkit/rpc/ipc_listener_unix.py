@@ -1,4 +1,5 @@
 from typing import AsyncGenerator
+from typing import Optional
 
 import anyio
 
@@ -12,8 +13,8 @@ class SocketListener(IPCListener):
 
     endpoint: str
 
-    def __init__(self, endpoint: str):
-        self.endpoint = endpoint
+    def __init__(self, endpoint: Optional[str]):
+        self.endpoint = endpoint if endpoint is not None else "/tmp/eval.sock"
 
     async def listen(self) -> AsyncGenerator[IPCClient, None]:
         async with await anyio.create_unix_listener(self.endpoint) as listener:

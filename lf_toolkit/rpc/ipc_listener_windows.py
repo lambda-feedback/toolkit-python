@@ -1,4 +1,5 @@
 from typing import AsyncGenerator
+from typing import Optional
 
 import anyio
 import pywintypes
@@ -13,8 +14,8 @@ class NamedPipeListener(IPCListener):
 
     endpoint: str
 
-    def __init__(self, endpoint: str):
-        self.endpoint = endpoint
+    def __init__(self, endpoint: Optional[str] = None):
+        self.endpoint = endpoint if endpoint is not None else r"\\.\pipe\eval"
 
     async def listen(self) -> AsyncGenerator[IPCClient, None]:
         while True:

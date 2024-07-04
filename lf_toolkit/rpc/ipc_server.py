@@ -9,7 +9,7 @@ from .rpc_handler import RpcHandler
 from .stream_io import StreamServer
 
 
-def default_ipc_listener_factory(endpoint: str) -> IPCListener:
+def default_ipc_listener_factory(endpoint: Optional[str]) -> IPCListener:
     if sys.platform == "win32":
         from .ipc_listener_windows import NamedPipeListener
 
@@ -27,7 +27,7 @@ class IPCServer(StreamServer):
 
     def __init__(
         self,
-        endpoint: str,
+        endpoint: Optional[str] = None,
         handler: Optional[RpcHandler] = None,
         listener_factory=default_ipc_listener_factory,
     ):
