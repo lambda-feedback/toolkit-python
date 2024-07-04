@@ -17,6 +17,26 @@ class StreamIO(ABC):
         pass
 
 
+class NewlineStreamIO:
+
+    base: StreamIO
+
+    def __init__(self, base: StreamIO):
+        self.base = base
+
+    async def read(self, size: int) -> bytes:
+        data = b""
+        while len(data) < size:
+            chunk = await self.base.read(1)
+            if chunk == b"\n":
+                break
+            data += chunk
+        return data
+
+    async def write(self, data: bytes):
+        await self.base.write(data + b"\n")
+
+
 class PrefixStreamIO:
 
     base: StreamIO
@@ -56,12 +76,15 @@ class PrefixStreamIO:
 
 class StreamServer(BaseServer):
 
+    def wrap_io(self, client: StreamIO) -> StreamIO:
+        return client
+
     async def _handle_client(self, client: StreamIO):
-        io = PrefixStreamIO(client)
+        io = self.wrap_io(client)
 
         while True:
             try:
-                data = await io.read(1024)
+                data = await io.read(4096)
 
                 if not data:
                     print("Received empty data")
