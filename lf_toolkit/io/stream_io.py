@@ -87,17 +87,17 @@ class StreamServer(BaseServer):
                 data = await io.read(4096)
 
                 if not data:
-                    print("Received empty data")
+                    # print("Received empty data")
                     break
 
                 response = await self.dispatch(data.decode("utf-8"))
 
                 await io.write(response.encode("utf-8"))
             except anyio.EndOfStream:
-                print("Client disconnected")
+                # print("Client disconnected")
                 break
             except anyio.ClosedResourceError:
-                print("Client disconnected")
+                # print("Client disconnected")
                 break
             except Exception as e:
                 print(f"Exception: {e}")

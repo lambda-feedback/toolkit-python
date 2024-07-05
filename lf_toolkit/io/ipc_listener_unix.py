@@ -22,7 +22,7 @@ class SocketListener(IPCListener):
             while True:
                 try:
                     stream = await listener.accept()
-                    print("Client connected")
+                    # print("Client connected")
                     yield SocketClient(stream)
                 except Exception as e:
                     print(f"Exception: {e}")

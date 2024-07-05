@@ -6,8 +6,8 @@ import anyio
 
 from lf_toolkit.rpc.stream_io import StreamIO
 
+from .handler import Handler
 from .ipc_listener_base import IPCListener
-from .rpc_handler import RpcHandler
 from .stream_io import NewlineStreamIO
 from .stream_io import StreamServer
 
@@ -31,7 +31,7 @@ class IPCServer(StreamServer):
     def __init__(
         self,
         endpoint: Optional[str] = None,
-        handler: Optional[RpcHandler] = None,
+        handler: Optional[Handler] = None,
         listener_factory=default_ipc_listener_factory,
     ):
         self._listener = listener_factory(endpoint)

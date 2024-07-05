@@ -6,7 +6,7 @@ import anyio
 
 from anyio.streams.stapled import StapledByteStream
 
-from .rpc_handler import RpcHandler
+from .handler import Handler
 from .stream_io import PrefixStreamIO
 from .stream_io import StreamIO
 from .stream_io import StreamServer
@@ -35,7 +35,7 @@ class StdioServer(StreamServer):
 
     _client: StdioClient
 
-    def __init__(self, handler: Optional[RpcHandler] = None):
+    def __init__(self, handler: Optional[Handler] = None):
         super().__init__(handler)
         self._client = StdioClient()
 
