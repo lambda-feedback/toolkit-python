@@ -11,7 +11,7 @@ from ..evaluation import Result as EvaluationResult
 from ..preview import Result as PreviewResult
 from ..shared import Params
 from .handler import Handler
-from .handler import JsonRpcHandler
+from .rpc_handler import JsonRpcHandler
 
 
 EvaluationFunction = Callable[
