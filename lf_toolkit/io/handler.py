@@ -42,18 +42,18 @@ class Handler(ABC):
         answer = req.get("answer", None)
         params = Params(req.get("params", {}))
 
-        return await self._call_user_handler("eval", response, answer, params)
-
-    async def handle_preview(self, req: dict):
-        response = req.get("response", None)
-        params = Params(req.get("params", {}))
-
-        result = await self._call_user_handler("preview", response, params)
+        result = await self._call_user_handler("eval", response, answer, params)
 
         if isinstance(result, EvaluationResult):
             return result.to_dict()
 
         return result
+
+    async def handle_preview(self, req: dict):
+        response = req.get("response", None)
+        params = Params(req.get("params", {}))
+
+        return await self._call_user_handler("preview", response, params)
 
     async def handle(self, name: Command, req: dict) -> dict:
         handler = getattr(self, f"handle_{name}", None)
