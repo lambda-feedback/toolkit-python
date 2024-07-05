@@ -1,4 +1,4 @@
-from lf_toolkit.internal import SymbolDict
+from ...shared import SymbolDict
 
 
 # from sympy.parsing.sympy_parser import parse_expr

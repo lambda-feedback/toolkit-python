@@ -4,11 +4,10 @@ from typing import Optional
 
 import anyio
 
-from lf_toolkit.rpc.stream_io import StreamIO
-
 from .handler import Handler
 from .ipc_listener_base import IPCListener
 from .stream_io import NewlineStreamIO
+from .stream_io import StreamIO
 from .stream_io import StreamServer
 
 
