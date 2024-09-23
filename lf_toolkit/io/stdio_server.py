@@ -16,8 +16,8 @@ class StdioClient(StreamIO):
 
     def __init__(self):
         self.stream = StapledByteStream(
-            anyio.wrap_file(sys.stdout.buffer),
-            anyio.wrap_file(sys.stdin.buffer),
+            anyio.wrap_file(sys.stdout),
+            anyio.wrap_file(sys.stdin),
         )
 
     async def read(self, size: int) -> bytes:
