@@ -2,8 +2,8 @@ import sys
 
 from typing import Optional
 
-import anyio
-
+from anyio.streams.file import FileReadStream
+from anyio.streams.file import FileWriteStream
 from anyio.streams.stapled import StapledByteStream
 
 from .handler import Handler
@@ -16,8 +16,8 @@ class StdioClient(StreamIO):
 
     def __init__(self):
         self.stream = StapledByteStream(
-            anyio.wrap_file(sys.stdout),
-            anyio.wrap_file(sys.stdin),
+            FileWriteStream(sys.stdout),
+            FileReadStream(sys.stdin),
         )
 
     async def read(self, size: int) -> bytes:
