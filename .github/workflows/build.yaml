@@ -52,12 +52,12 @@ jobs:
           path: .venv
           key: venv-py${{ steps.setup-python.outputs.python-version }}-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
 
+      - name: Install project
+        run: poetry install --no-interaction
+
       - name: Install dependencies
         if: steps.cache-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root --all-extras
-
-      - name: Install project
-        run: poetry install --no-interaction
 
       - name: Run tests
         run: |
@@ -105,12 +105,12 @@ jobs:
           path: .venv
           key: venv-py${{ steps.setup-python.outputs.python-version }}-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Install dependencies
-        if: steps.cache-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-
       - name: Install project
         run: poetry install --no-interaction
+
+      - name: Install dependencies
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root --all-extras
 
       - name: Run build
         run: |
