@@ -12,11 +12,11 @@ include = [{ path = "lf_toolkit/py.typed" }]
 ##########################
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 sympy = "1.12"
 ujson = "5.10.0"
 anyio = "4.6.0"
-jsonrpcserver = "5.0.9"
+jsonrpcserver = ">=5.0.9"
 
 ##########################
 # parsing dependencies
