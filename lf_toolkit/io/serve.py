@@ -6,6 +6,7 @@ import anyio
 from anyio.abc import CancelScope
 
 from .base_server import BaseServer
+from .file_server import FileServer
 
 
 async def signal_handler(scope: CancelScope):
@@ -22,9 +23,12 @@ async def signal_handler(scope: CancelScope):
 
 def run(server: BaseServer):
     async def main():
-        async with anyio.create_task_group() as tg:
-            tg.start_soon(signal_handler, tg.cancel_scope)
-            tg.start_soon(server.run)
+        if isinstance(server, FileServer):
+            await server.run()
+        else:
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(signal_handler, tg.cancel_scope)
+                tg.start_soon(server.run)
 
     anyio.run(main)
 
@@ -38,7 +42,7 @@ def run(server: BaseServer):
 
 
 def create_server():
-    io = os.environ.get("EVAL_IO", "rpc")
+    io = os.environ.get("EVAL_IO", "rpc").lower()
 
     if io == "rpc":
         return create_rpc_server()
