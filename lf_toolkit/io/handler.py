@@ -38,11 +38,12 @@ class Handler(ABC):
             raise ValueError(f"Error calling user handler for '{req}': {e}")
 
     async def handle_eval(self, req: dict):
-        response = req.get("response", None)
-        answer = req.get("answer", None)
-        params = Params(req.get("params", {}))
+        params = req["params"]
+        response = params.get("response", None)
+        answer = params.get("answer", None)
+        request_params = Params(params.get("params", {}))
 
-        result = await self._call_user_handler("eval", response, answer, params)
+        result = await self._call_user_handler("eval", response, answer, request_params)
 
         if isinstance(result, EvaluationResult):
             return result.to_dict()
