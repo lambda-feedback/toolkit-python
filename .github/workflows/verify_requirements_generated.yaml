@@ -45,7 +45,6 @@ jobs:
           version: ${{ env.POETRY_VERSION }}
 
       - name: Install export plugin
-        if: steps.cache-poetry.outputs.cache-hit != 'true'
         run: poetry self add poetry-plugin-export
 
       - name: Export requirements.txt
