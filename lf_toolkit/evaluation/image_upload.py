@@ -113,7 +113,7 @@ def get_s3_bucket_uri() -> str:
     return s3_uri
 
 
-def upload_image(img: Image.Image, mime_type: str) -> Dict:
+def upload_image(img: Image.Image, mime_type: str) -> str:
     """Upload PIL image with comprehensive MIME type validation
 
     Args:
@@ -130,26 +130,32 @@ def upload_image(img: Image.Image, mime_type: str) -> Dict:
     """
     try:
         # Get URL from environment variable
-        url: str = get_s3_bucket_uri()
+        base_url: str = get_s3_bucket_uri()
 
         filename: str = generate_file_name(img)
 
         validate_mime_type(mime_type, img, filename)
+
+        full_url = base_url + filename
 
         buffer: BytesIO = BytesIO()
         img_format: str = img.format if img.format else 'PNG'
         img.save(buffer, format=img_format)
         buffer.seek(0)
 
-        files: Dict[str, tuple] = {'file': (filename, buffer, mime_type)}
-        response: requests.Response = requests.put(url, files=files, timeout=30)
+        response: requests.Response = requests.put(
+            full_url,
+            data=buffer,
+            headers={'Content-Type': mime_type},
+            timeout=30
+        )
 
         if response.status_code != 200:
             raise ImageUploadError(
                 f"Upload failed with status code {response.status_code}: {response.text}"
             )
 
-        return response.json()['url']
+        return full_url
 
     except (InvalidMimeTypeError, MissingEnvironmentVariableError):
         raise
@@ -164,3 +170,4 @@ if __name__ == "__main__":
 
     # Execute
     result = upload_image(img, 'image/jpeg')
+    print(result)
