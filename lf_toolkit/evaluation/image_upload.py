@@ -142,7 +142,7 @@ def upload_image(img: Image.Image, mime_type: str) -> Dict:
         buffer.seek(0)
 
         files: Dict[str, tuple] = {'file': (filename, buffer, mime_type)}
-        response: requests.Response = requests.post(url, files=files, timeout=30)
+        response: requests.Response = requests.put(url, files=files, timeout=30)
 
         if response.status_code != 200:
             raise ImageUploadError(
@@ -158,3 +158,9 @@ def upload_image(img: Image.Image, mime_type: str) -> Dict:
     except Exception as e:
         raise ImageUploadError(f"Unexpected error: {str(e)}")
 
+if __name__ == "__main__":
+    img = Image.new('RGB', (100, 100), color='red')
+    img.format = 'JPEG'
+
+    # Execute
+    result = upload_image(img, 'image/jpeg')

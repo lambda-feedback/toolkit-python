@@ -184,10 +184,10 @@ class TestGetS3BucketUri:
 class TestUploadImage:
     """Test suite for upload_image function"""
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.post')
+    @patch('lf_toolkit.evaluation.image_upload.requests.put')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_successful_upload(self, mock_uuid, mock_getenv, mock_post):
+    def test_successful_upload(self, mock_uuid, mock_getenv, mock_put):
         """Test successful image upload with UUID-based filename"""
         # Setup mocks
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
@@ -196,7 +196,7 @@ class TestUploadImage:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {'url': f'https://s3.amazonaws.com/uploaded-image.jpg'}
-        mock_post.return_value = mock_response
+        mock_put.return_value = mock_response
 
         # Create a real PIL image for testing
         img = Image.new('RGB', (100, 100), color='red')
@@ -207,19 +207,19 @@ class TestUploadImage:
 
         # Verify response
         assert result == 'https://s3.amazonaws.com/uploaded-image.jpg'
-        assert mock_post.called
-        assert mock_post.call_args[1]['timeout'] == 30
+        assert mock_put.called
+        assert mock_put.call_args[1]['timeout'] == 30
 
         # Verify UUID-based filename is used
-        call_args = mock_post.call_args
+        call_args = mock_put.call_args
         filename, file_obj, mime_type = call_args[1]['files']['file']
         assert filename == '12345678-1234-5678-1234-567812345678.jpeg'
         assert mime_type == 'image/jpeg'
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.post')
+    @patch('lf_toolkit.evaluation.image_upload.requests.put')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_with_png_image(self, mock_uuid, mock_getenv, mock_post):
+    def test_upload_with_png_image(self, mock_uuid, mock_getenv, mock_put):
         """Test uploading PNG image with UUID-based filename"""
         mock_uuid.return_value = uuid.UUID('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')
         mock_getenv.return_value = 'https://storage.example.com'
@@ -227,7 +227,7 @@ class TestUploadImage:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {'url': 'https://storage.example.com/image.png'}
-        mock_post.return_value = mock_response
+        mock_put.return_value = mock_response
 
         img = Image.new('RGBA', (50, 50), color=(0, 255, 0, 128))
         img.format = 'PNG'
@@ -237,7 +237,7 @@ class TestUploadImage:
         assert result == 'https://storage.example.com/image.png'
 
         # Verify UUID-based filename is used
-        call_args = mock_post.call_args
+        call_args = mock_put.call_args
         filename, file_obj, mime_type = call_args[1]['files']['file']
         assert filename == 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.png'
         assert mime_type == 'image/png'
@@ -264,10 +264,10 @@ class TestUploadImage:
         with pytest.raises(InvalidMimeTypeError):
             upload_image(img, 'image/invalid')
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.post')
+    @patch('lf_toolkit.evaluation.image_upload.requests.put')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_server_error(self, mock_uuid, mock_getenv, mock_post):
+    def test_upload_server_error(self, mock_uuid, mock_getenv, mock_put):
         """Test upload fails when server returns error"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
         mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
@@ -275,7 +275,7 @@ class TestUploadImage:
         mock_response = Mock()
         mock_response.status_code = 500
         mock_response.text = 'Internal Server Error'
-        mock_post.return_value = mock_response
+        mock_put.return_value = mock_response
 
         img = Image.new('RGB', (100, 100))
         img.format = 'JPEG'
@@ -285,15 +285,15 @@ class TestUploadImage:
 
         assert "Upload failed with status code 500" in str(exc_info.value)
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.post')
+    @patch('lf_toolkit.evaluation.image_upload.requests.put')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_network_error(self, mock_uuid, mock_getenv, mock_post):
+    def test_upload_network_error(self, mock_uuid, mock_getenv, mock_put):
         """Test upload fails on network error"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
         mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
 
-        mock_post.side_effect = requests.exceptions.ConnectionError('Connection failed')
+        mock_put.side_effect = requests.exceptions.ConnectionError('Connection failed')
 
         img = Image.new('RGB', (100, 100))
         img.format = 'JPEG'
@@ -303,15 +303,15 @@ class TestUploadImage:
 
         assert "Network error" in str(exc_info.value)
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.post')
+    @patch('lf_toolkit.evaluation.image_upload.requests.put')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_timeout_error(self, mock_uuid, mock_getenv, mock_post):
+    def test_upload_timeout_error(self, mock_uuid, mock_getenv, mock_put):
         """Test upload fails on timeout"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
         mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
 
-        mock_post.side_effect = requests.exceptions.Timeout('Request timed out')
+        mock_put.side_effect = requests.exceptions.Timeout('Request timed out')
 
         img = Image.new('RGB', (100, 100))
         img.format = 'JPEG'
@@ -321,10 +321,10 @@ class TestUploadImage:
 
         assert "Network error" in str(exc_info.value)
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.post')
+    @patch('lf_toolkit.evaluation.image_upload.requests.put')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_mime_type_mismatch(self, mock_uuid, mock_getenv, mock_post):
+    def test_upload_mime_type_mismatch(self, mock_uuid, mock_getenv, mock_put):
         """Test upload fails when MIME type doesn't match image format"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
         mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
@@ -335,10 +335,10 @@ class TestUploadImage:
         with pytest.raises(InvalidMimeTypeError):
             upload_image(img, 'image/jpeg')
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.post')
+    @patch('lf_toolkit.evaluation.image_upload.requests.put')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_image_no_format(self, mock_uuid, mock_getenv, mock_post):
+    def test_upload_image_no_format(self, mock_uuid, mock_getenv, mock_put):
         """Test upload with image that has no format (defaults to PNG) uses UUID filename"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
         mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
@@ -346,7 +346,7 @@ class TestUploadImage:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {'url': 'https://s3.amazonaws.com/image.png'}
-        mock_post.return_value = mock_response
+        mock_put.return_value = mock_response
 
         img = Image.new('RGB', (100, 100))
         img.format = None
@@ -356,22 +356,22 @@ class TestUploadImage:
         assert result == 'https://s3.amazonaws.com/image.png'
 
         # Verify UUID-based filename with default .png extension
-        call_args = mock_post.call_args
+        call_args = mock_put.call_args
         filename, file_obj, mime_type = call_args[1]['files']['file']
         assert filename == '12345678-1234-5678-1234-567812345678.png'
         assert mime_type == 'image/png'
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.post')
+    @patch('lf_toolkit.evaluation.image_upload.requests.put')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_uses_different_uuid_each_time(self, mock_uuid, mock_getenv, mock_post):
+    def test_upload_uses_different_uuid_each_time(self, mock_uuid, mock_getenv, mock_put):
         """Test that each upload generates a unique UUID-based filename"""
         mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
 
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {'url': 'https://s3.amazonaws.com/uploaded.jpg'}
-        mock_post.return_value = mock_response
+        mock_put.return_value = mock_response
 
         # First upload with first UUID
         uuid1 = uuid.UUID('11111111-1111-1111-1111-111111111111')
@@ -381,7 +381,7 @@ class TestUploadImage:
         img1.format = 'JPEG'
         upload_image(img1, 'image/jpeg')
 
-        filename1 = mock_post.call_args[1]['files']['file'][0]
+        filename1 = mock_put.call_args[1]['files']['file'][0]
 
         # Second upload with different UUID
         uuid2 = uuid.UUID('22222222-2222-2222-2222-222222222222')
@@ -391,17 +391,17 @@ class TestUploadImage:
         img2.format = 'JPEG'
         upload_image(img2, 'image/jpeg')
 
-        filename2 = mock_post.call_args[1]['files']['file'][0]
+        filename2 = mock_put.call_args[1]['files']['file'][0]
 
         # Verify different UUIDs result in different filenames
         assert filename1 == '11111111-1111-1111-1111-111111111111.jpeg'
         assert filename2 == '22222222-2222-2222-2222-222222222222.jpeg'
         assert filename1 != filename2
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.post')
+    @patch('lf_toolkit.evaluation.image_upload.requests.put')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_verifies_correct_file_uploaded(self, mock_uuid, mock_getenv, mock_post):
+    def test_upload_verifies_correct_file_uploaded(self, mock_uuid, mock_getenv, mock_put):
         """Test that the correct file data is sent in upload request"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
         mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
@@ -409,15 +409,15 @@ class TestUploadImage:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {'url': 'https://s3.amazonaws.com/image.jpg'}
-        mock_post.return_value = mock_response
+        mock_put.return_value = mock_response
 
         img = Image.new('RGB', (100, 100), color='blue')
         img.format = 'JPEG'
 
         upload_image(img, 'image/jpeg')
 
-        # Verify the post was called with correct arguments
-        call_args = mock_post.call_args
+        # Verify the put was called with correct arguments
+        call_args = mock_put.call_args
         assert call_args[0][0] == 'https://s3.amazonaws.com/bucket'
         assert 'files' in call_args[1]
         assert 'file' in call_args[1]['files']
