@@ -13,21 +13,15 @@ MIME_TO_FORMAT: Dict[str, List[str]] = {
     'image/png': ['PNG'],
     'image/gif': ['GIF'],
     'image/bmp': ['BMP'],
-    'image/webp': ['WEBP'],
-    'image/tiff': ['TIFF', 'TIF'],
-    'image/x-icon': ['ICO'],
 }
 
-FORMAT_TO_EXTENSION: Dict[str, List[str]] = {
-    'JPEG': ['.jpg', '.jpeg', '.jpe'],
-    'PNG': ['.png'],
-    'GIF': ['.gif'],
-    'BMP': ['.bmp'],
-    'WEBP': ['.webp'],
-    'TIFF': ['.tiff', '.tif'],
-    'ICO': ['.ico'],
+FORMAT_TO_MIME: Dict[str, str] = {
+    'JPEG': 'image/jpeg',
+    'JPG': 'image/jpeg',
+    'PNG': 'image/png',
+    'GIF': 'image/gif',
+    "bmp": 'image/bmp'
 }
-
 
 class ImageUploadError(Exception):
     """Custom exception for image upload failures"""
@@ -57,50 +51,6 @@ def generate_file_name(img: Image.Image) -> str:
     format_ext: str = img.format.lower() if img.format else 'png'
     return f"{unique_id}.{format_ext}"
 
-
-def validate_mime_type(mime_type: str, img: Image.Image, filename: str) -> bool:
-    """Validate MIME type against image format and filename
-
-    Args:
-        mime_type: MIME type string to validate
-        img: PIL Image object
-        filename: Name of the file
-
-    Returns:
-        True if validation passes
-
-    Raises:
-        InvalidMimeTypeError: If MIME type is invalid or doesn't match image
-    """
-    if mime_type not in MIME_TO_FORMAT:
-        raise InvalidMimeTypeError(
-            f"Invalid MIME type '{mime_type}'. "
-            f"Supported types: {', '.join(MIME_TO_FORMAT.keys())}"
-        )
-
-    img_format: Optional[str] = img.format.upper() if img.format else None
-
-    if img_format:
-        allowed_formats: List[str] = MIME_TO_FORMAT[mime_type]
-        if img_format not in allowed_formats:
-            raise InvalidMimeTypeError(
-                f"MIME type '{mime_type}' does not match image format '{img_format}'. "
-                f"Expected formats for {mime_type}: {', '.join(allowed_formats)}"
-            )
-
-    file_ext: str = filename[filename.rfind('.'):].lower()
-
-    if img_format and img_format in FORMAT_TO_EXTENSION:
-        valid_extensions: List[str] = FORMAT_TO_EXTENSION[img_format]
-        if file_ext not in valid_extensions:
-            raise InvalidMimeTypeError(
-                f"File extension '{file_ext}' does not match format '{img_format}'. "
-                f"Expected extensions: {', '.join(valid_extensions)}"
-            )
-
-    return True
-
-
 def get_s3_bucket_uri() -> str:
     """Get S3 bucket URI from environment variable"""
     s3_uri: Optional[str] = os.getenv('S3_BUCKET_URI')
@@ -113,12 +63,11 @@ def get_s3_bucket_uri() -> str:
     return s3_uri
 
 
-def upload_image(img: Image.Image, mime_type: str) -> str:
+def upload_image(img: Image.Image) -> str:
     """Upload PIL image with comprehensive MIME type validation
 
     Args:
         img: PIL Image object to upload
-        mime_type: MIME type for the upload
 
     Returns:
         JSON response from the server as a dictionary
@@ -134,9 +83,12 @@ def upload_image(img: Image.Image, mime_type: str) -> str:
 
         filename: str = generate_file_name(img)
 
-        validate_mime_type(mime_type, img, filename)
-
         full_url = base_url + filename
+
+        if img.format is None:
+            img.format = 'PNG'
+
+        mime_type = FORMAT_TO_MIME[img.format.upper()]
 
         buffer: BytesIO = BytesIO()
         img_format: str = img.format if img.format else 'PNG'
@@ -169,5 +121,5 @@ if __name__ == "__main__":
     img.format = 'JPEG'
 
     # Execute
-    result = upload_image(img, 'image/jpeg')
+    result = upload_image(img)
     print(result)

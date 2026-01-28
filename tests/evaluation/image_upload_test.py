@@ -7,14 +7,12 @@ import requests
 # Import the module to test
 from lf_toolkit.evaluation.image_upload import (
     generate_file_name,
-    validate_mime_type,
     get_s3_bucket_uri,
     upload_image,
     ImageUploadError,
     InvalidMimeTypeError,
     MissingEnvironmentVariableError,
     MIME_TO_FORMAT,
-    FORMAT_TO_EXTENSION
 )
 
 
@@ -63,89 +61,6 @@ class TestGenerateFileName:
         filename2 = generate_file_name(img)
 
         assert filename1 != filename2
-
-
-class TestValidateMimeType:
-    """Test suite for validate_mime_type function"""
-
-    def test_valid_jpeg_mime_type(self):
-        """Test validation with valid JPEG MIME type"""
-        img = Mock(spec=Image.Image)
-        img.format = 'JPEG'
-
-        result = validate_mime_type('image/jpeg', img, 'test.jpg')
-        assert result is True
-
-    def test_valid_png_mime_type(self):
-        """Test validation with valid PNG MIME type"""
-        img = Mock(spec=Image.Image)
-        img.format = 'PNG'
-
-        result = validate_mime_type('image/png', img, 'test.png')
-        assert result is True
-
-    def test_invalid_mime_type(self):
-        """Test validation with unsupported MIME type"""
-        img = Mock(spec=Image.Image)
-        img.format = 'PNG'
-
-        with pytest.raises(InvalidMimeTypeError) as exc_info:
-            validate_mime_type('image/invalid', img, 'test.png')
-
-        assert "Invalid MIME type 'image/invalid'" in str(exc_info.value)
-
-    def test_mime_type_format_mismatch(self):
-        """Test validation when MIME type doesn't match image format"""
-        img = Mock(spec=Image.Image)
-        img.format = 'PNG'
-
-        with pytest.raises(InvalidMimeTypeError) as exc_info:
-            validate_mime_type('image/jpeg', img, 'test.png')
-
-        assert "does not match image format 'PNG'" in str(exc_info.value)
-
-    def test_extension_format_mismatch(self):
-        """Test validation when file extension doesn't match format"""
-        img = Mock(spec=Image.Image)
-        img.format = 'JPEG'
-
-        with pytest.raises(InvalidMimeTypeError) as exc_info:
-            validate_mime_type('image/jpeg', img, 'test.png')
-
-        assert "File extension '.png' does not match format 'JPEG'" in str(exc_info.value)
-
-    def test_valid_with_no_image_format(self):
-        """Test validation when image has no format attribute"""
-        img = Mock(spec=Image.Image)
-        img.format = None
-
-        # Should not raise when format is None
-        result = validate_mime_type('image/png', img, 'test.png')
-        assert result is True
-
-    def test_valid_webp_mime_type(self):
-        """Test validation with valid WEBP MIME type"""
-        img = Mock(spec=Image.Image)
-        img.format = 'WEBP'
-
-        result = validate_mime_type('image/webp', img, 'test.webp')
-        assert result is True
-
-    def test_jpeg_with_jpg_extension(self):
-        """Test JPEG image with .jpg extension"""
-        img = Mock(spec=Image.Image)
-        img.format = 'JPEG'
-
-        result = validate_mime_type('image/jpeg', img, 'photo.jpg')
-        assert result is True
-
-    def test_jpeg_with_jpeg_extension(self):
-        """Test JPEG image with .jpeg extension"""
-        img = Mock(spec=Image.Image)
-        img.format = 'JPEG'
-
-        result = validate_mime_type('image/jpeg', img, 'photo.jpeg')
-        assert result is True
 
 
 class TestGetS3BucketUri:
@@ -201,7 +116,7 @@ class TestUploadImage:
         img.format = 'JPEG'
 
         # Execute
-        result = upload_image(img, 'image/jpeg')
+        result = upload_image(img)
 
         # Verify response
         assert result == 'https://s3.amazonaws.com/my-bucket/12345678-1234-5678-1234-567812345678.jpeg'
@@ -223,7 +138,7 @@ class TestUploadImage:
         img = Image.new('RGBA', (50, 50), color=(0, 255, 0, 128))
         img.format = 'PNG'
 
-        result = upload_image(img, 'image/png')
+        result = upload_image(img)
 
         assert result == 'https://storage.example.com/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.png'
 
@@ -236,18 +151,7 @@ class TestUploadImage:
         img.format = 'JPEG'
 
         with pytest.raises(MissingEnvironmentVariableError):
-            upload_image(img, 'image/jpeg')
-
-    @patch('lf_toolkit.evaluation.image_upload.os.getenv')
-    def test_upload_invalid_mime_type(self, mock_getenv):
-        """Test upload fails with invalid MIME type"""
-        mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
-
-        img = Image.new('RGB', (100, 100))
-        img.format = 'JPEG'
-
-        with pytest.raises(InvalidMimeTypeError):
-            upload_image(img, 'image/invalid')
+            upload_image(img)
 
     @patch('lf_toolkit.evaluation.image_upload.requests.put')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
@@ -266,7 +170,7 @@ class TestUploadImage:
         img.format = 'JPEG'
 
         with pytest.raises(ImageUploadError) as exc_info:
-            upload_image(img, 'image/jpeg')
+            upload_image(img)
 
         assert "Upload failed with status code 500" in str(exc_info.value)
 
@@ -284,7 +188,7 @@ class TestUploadImage:
         img.format = 'JPEG'
 
         with pytest.raises(ImageUploadError) as exc_info:
-            upload_image(img, 'image/jpeg')
+            upload_image(img)
 
         assert "Network error" in str(exc_info.value)
 
@@ -302,23 +206,9 @@ class TestUploadImage:
         img.format = 'JPEG'
 
         with pytest.raises(ImageUploadError) as exc_info:
-            upload_image(img, 'image/jpeg')
+            upload_image(img)
 
         assert "Network error" in str(exc_info.value)
-
-    @patch('lf_toolkit.evaluation.image_upload.requests.put')
-    @patch('lf_toolkit.evaluation.image_upload.os.getenv')
-    @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_mime_type_mismatch(self, mock_uuid, mock_getenv, mock_put):
-        """Test upload fails when MIME type doesn't match image format"""
-        mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
-        mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
-
-        img = Image.new('RGB', (100, 100))
-        img.format = 'PNG'
-
-        with pytest.raises(InvalidMimeTypeError):
-            upload_image(img, 'image/jpeg')
 
     @patch('lf_toolkit.evaluation.image_upload.requests.put')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
@@ -335,7 +225,7 @@ class TestUploadImage:
         img = Image.new('RGB', (100, 100))
         img.format = None
 
-        result = upload_image(img, 'image/png')
+        result = upload_image(img)
 
         assert result == 'https://s3.amazonaws.com/bucket/12345678-1234-5678-1234-567812345678.png'
 
@@ -354,7 +244,7 @@ class TestUploadImage:
         img = Image.new('RGB', (100, 100), color='blue')
         img.format = 'JPEG'
 
-        upload_image(img, 'image/jpeg')
+        upload_image(img)
 
 
 class TestExceptionHierarchy:
@@ -383,29 +273,6 @@ class TestExceptionHierarchy:
         """Test that InvalidMimeTypeError can be caught as ImageUploadError"""
         with pytest.raises(ImageUploadError):
             raise InvalidMimeTypeError("Invalid MIME")
-
-
-class TestConstants:
-    """Test suite for module constants"""
-
-    def test_mime_to_format_has_expected_types(self):
-        """Test that MIME_TO_FORMAT contains expected image types"""
-        assert 'image/jpeg' in MIME_TO_FORMAT
-        assert 'image/png' in MIME_TO_FORMAT
-        assert 'image/gif' in MIME_TO_FORMAT
-        assert 'image/webp' in MIME_TO_FORMAT
-
-    def test_format_to_extension_has_expected_formats(self):
-        """Test that FORMAT_TO_EXTENSION contains expected formats"""
-        assert 'JPEG' in FORMAT_TO_EXTENSION
-        assert 'PNG' in FORMAT_TO_EXTENSION
-        assert 'GIF' in FORMAT_TO_EXTENSION
-        assert 'WEBP' in FORMAT_TO_EXTENSION
-
-    def test_jpeg_has_multiple_extensions(self):
-        """Test that JPEG format has multiple valid extensions"""
-        assert '.jpg' in FORMAT_TO_EXTENSION['JPEG']
-        assert '.jpeg' in FORMAT_TO_EXTENSION['JPEG']
 
 
 if __name__ == '__main__':
