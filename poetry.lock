@@ -130,6 +130,46 @@ jupyter = ["ipython (>=7.8.0)", "tokenize-rt (>=3.2.0)"]
 uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
+name = "boto3"
+version = "1.42.36"
+description = "The AWS SDK for Python"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "boto3-1.42.36-py3-none-any.whl", hash = "sha256:e0ff6f2747bfdec63405b35ea185a7aea35239c3f4fe99e4d29368a6de9c4a84"},
+    {file = "boto3-1.42.36.tar.gz", hash = "sha256:a4eb51105c8c5d7b2bc2a9e2316e69baf69a55611275b9f189c0cf59f1aae171"},
+]
+
+[package.dependencies]
+botocore = ">=1.42.36,<1.43.0"
+jmespath = ">=0.7.1,<2.0.0"
+s3transfer = ">=0.16.0,<0.17.0"
+
+[package.extras]
+crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
+
+[[package]]
+name = "botocore"
+version = "1.42.36"
+description = "Low-level, data-driven core of boto 3."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "botocore-1.42.36-py3-none-any.whl", hash = "sha256:2cfae4c482e5e87bd835ab4289b711490c161ba57e852c06b65a03e7c25e08eb"},
+    {file = "botocore-1.42.36.tar.gz", hash = "sha256:2ebd89cc75927944e2cee51b7adce749f38e0cb269a758a6464a27f8bcca65fb"},
+]
+
+[package.dependencies]
+jmespath = ">=0.7.1,<2.0.0"
+python-dateutil = ">=2.1,<3.0.0"
+urllib3 = {version = ">=1.25.4,<2.2.0 || >2.2.0,<3", markers = "python_version >= \"3.10\""}
+
+[package.extras]
+crt = ["awscrt (==0.29.2)"]
+
+[[package]]
 name = "build"
 version = "1.3.0"
 description = "A simple, correct Python build frontend"
@@ -1024,6 +1064,18 @@ test = ["async-timeout ; python_version < \"3.11\"", "pytest", "pytest-asyncio (
 trio = ["trio"]
 
 [[package]]
+name = "jmespath"
+version = "1.1.0"
+description = "JSON Matching Expressions"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "jmespath-1.1.0-py3-none-any.whl", hash = "sha256:a5663118de4908c91729bea0acadca56526eb2698e83de10cd116ae0f4e97c64"},
+    {file = "jmespath-1.1.0.tar.gz", hash = "sha256:472c87d80f36026ae83c6ddd0f1d05d4e510134ed462851fd5f754c8c3cbb88d"},
+]
+
+[[package]]
 name = "jsonrpcserver"
 version = "5.0.9"
 description = "Process JSON-RPC requests"
@@ -1827,6 +1879,21 @@ pytest = ">=4.6"
 testing = ["fields", "hunter", "process-tests", "pytest-xdist", "virtualenv"]
 
 [[package]]
+name = "python-dateutil"
+version = "2.9.0.post0"
+description = "Extensions to the standard Python datetime module"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
+groups = ["main"]
+files = [
+    {file = "python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3"},
+    {file = "python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427"},
+]
+
+[package.dependencies]
+six = ">=1.5"
+
+[[package]]
 name = "python-dotenv"
 version = "1.2.1"
 description = "Read key-value pairs from a .env file and set them as environment variables"
@@ -2267,6 +2334,24 @@ files = [
 ]
 
 [[package]]
+name = "s3transfer"
+version = "0.16.0"
+description = "An Amazon S3 Transfer Manager"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "s3transfer-0.16.0-py3-none-any.whl", hash = "sha256:18e25d66fed509e3868dc1572b3f427ff947dd2c56f844a5bf09481ad3f3b2fe"},
+    {file = "s3transfer-0.16.0.tar.gz", hash = "sha256:8e990f13268025792229cd52fa10cb7163744bf56e719e0b9cb925ab79abf920"},
+]
+
+[package.dependencies]
+botocore = ">=1.37.4,<2.0a.0"
+
+[package.extras]
+crt = ["botocore[crt] (>=1.37.4,<2.0a.0)"]
+
+[[package]]
 name = "secretstorage"
 version = "3.4.0"
 description = "Python bindings to FreeDesktop.org Secret Service API"
@@ -2293,6 +2378,18 @@ groups = ["main"]
 files = [
     {file = "shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686"},
     {file = "shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de"},
+]
+
+[[package]]
+name = "six"
+version = "1.17.0"
+description = "Python 2 and 3 compatibility utilities"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
+groups = ["main"]
+files = [
+    {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
+    {file = "six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81"},
 ]
 
 [[package]]
@@ -2751,4 +2848,4 @@ parsing = ["antlr4-python3-runtime", "lark", "latex2sympy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "7fe52b482228044b36e97dde750e982e13c7837c6c7f9d6fd45433aeae8c18ea"
+content-hash = "9dc3f7e12199191cf41834205dbb2705b1e1e4b2dd851b1bb57e312d3c4e8a8b"

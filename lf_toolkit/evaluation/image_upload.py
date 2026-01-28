@@ -1,3 +1,5 @@
+import hashlib
+
 import requests
 import uuid
 import os
@@ -5,6 +7,10 @@ from io import BytesIO
 from typing import Dict, List, Optional
 from PIL import Image
 from dotenv import load_dotenv
+
+from botocore.auth import SigV4Auth
+from botocore.awsrequest import AWSRequest
+from botocore.credentials import Credentials
 
 load_dotenv()
 
@@ -63,6 +69,49 @@ def get_s3_bucket_uri() -> str:
     return s3_uri
 
 
+def get_aws_signed_request(full_url, buffer, mime_type):
+    credentials = Credentials(
+        access_key=os.environ['AWS_ACCESS_KEY_ID'],
+        secret_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+    )
+
+    if hasattr(buffer, 'read'):
+        # It's a file-like object (BytesIO, etc.)
+        current_pos = buffer.tell()  # Save current position
+        buffer.seek(0)  # Go to start
+        data = buffer.read()  # Read all data
+        buffer.seek(current_pos)  # Restore position
+    else:
+        # It's already bytes
+        data = buffer
+
+        # Calculate content hash and length
+    content_hash = hashlib.sha256(data).hexdigest()
+    content_length = len(data)
+
+    # Create the request for signing with required headers
+    headers = {
+        'Content-Type': mime_type,
+        'Content-Length': str(content_length),
+        'x-amz-content-sha256': content_hash
+    }
+
+    # Create the request for signing
+    aws_request = AWSRequest(
+        method='PUT',
+        url=full_url,
+        data=buffer,
+        headers=headers
+    )
+
+    region = os.environ.get('AWS_REGION', 'eu-west-2')
+
+    # Sign the request
+    SigV4Auth(credentials, 's3', region).add_auth(aws_request)
+
+    return aws_request
+
+
 def upload_image(img: Image.Image) -> str:
     """Upload PIL image with comprehensive MIME type validation
 
@@ -95,10 +144,13 @@ def upload_image(img: Image.Image) -> str:
         img.save(buffer, format=img_format)
         buffer.seek(0)
 
-        response: requests.Response = requests.put(
-            full_url,
-            data=buffer,
-            headers={'Content-Type': mime_type},
+        aws_request = get_aws_signed_request(full_url, buffer, mime_type).prepare()
+
+        response: requests.Response = requests.request(
+            method=aws_request.method,
+            url=aws_request.url,
+            data=aws_request.body,
+            headers=aws_request.headers,
             timeout=30
         )
 
