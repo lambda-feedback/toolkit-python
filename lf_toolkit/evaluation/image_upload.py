@@ -73,6 +73,7 @@ def get_aws_signed_request(full_url, buffer, mime_type):
     credentials = Credentials(
         access_key=os.environ['AWS_ACCESS_KEY_ID'],
         secret_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+        token=os.environ.get('AWS_SESSION_TOKEN', None)
     )
 
     if hasattr(buffer, 'read'):
