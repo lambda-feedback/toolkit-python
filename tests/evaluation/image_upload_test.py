@@ -12,7 +12,6 @@ from lf_toolkit.evaluation.image_upload import (
     ImageUploadError,
     InvalidMimeTypeError,
     MissingEnvironmentVariableError,
-    MIME_TO_FORMAT,
 )
 
 
@@ -98,49 +97,74 @@ class TestGetS3BucketUri:
 class TestUploadImage:
     """Test suite for upload_image function"""
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.put')
+    @patch('lf_toolkit.evaluation.image_upload.requests.request')
+    @patch('lf_toolkit.evaluation.image_upload.get_aws_signed_request')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_successful_upload(self, mock_uuid, mock_getenv, mock_put):
+    def test_successful_upload(self, mock_uuid, mock_getenv, mock_get_aws_signed_request, mock_request):
         """Test successful image upload with UUID-based filename"""
         # Setup mocks
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
-        mock_getenv.return_value = 'https://s3.amazonaws.com/my-bucket/'
+        mock_getenv.return_value = 'https://s3.amazonaws.com/eduvision'
+
+        # Mock the AWS signed request
+        mock_prepared_request = Mock()
+        mock_prepared_request.method = 'PUT'
+        mock_prepared_request.url = 'https://s3.amazonaws.com/eduvision/eduvision/12345678-1234-5678-1234-567812345678.jpeg'
+        mock_prepared_request.body = b'mock_body'
+        mock_prepared_request.headers = {'Content-Type': 'image/jpeg'}
+
+        mock_aws_request = Mock()
+        mock_aws_request.prepare.return_value = mock_prepared_request
+        mock_get_aws_signed_request.return_value = mock_aws_request
 
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_put.return_value = mock_response
+        mock_request.return_value = mock_response
 
         # Create a real PIL image for testing
         img = Image.new('RGB', (100, 100), color='red')
         img.format = 'JPEG'
 
         # Execute
-        result = upload_image(img)
+        result = upload_image(img, "eduvision")
 
         # Verify response
-        assert result == 'https://s3.amazonaws.com/my-bucket/12345678-1234-5678-1234-567812345678.jpeg'
-        assert mock_put.called
-        assert mock_put.call_args[1]['timeout'] == 30
+        assert result == 'https://s3.amazonaws.com/eduvision/eduvision/12345678-1234-5678-1234-567812345678.jpeg'
+        assert mock_request.called
+        assert mock_request.call_args[1]['timeout'] == 30
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.put')
+    @patch('lf_toolkit.evaluation.image_upload.requests.request')
+    @patch('lf_toolkit.evaluation.image_upload.get_aws_signed_request')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_with_png_image(self, mock_uuid, mock_getenv, mock_put):
+    def test_upload_with_png(self, mock_uuid, mock_getenv, mock_get_aws_signed_request, mock_request):
         """Test uploading PNG image with UUID-based filename"""
-        mock_uuid.return_value = uuid.UUID('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')
-        mock_getenv.return_value = 'https://storage.example.com/'
+        # Setup mocks
+        mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
+        mock_getenv.return_value = 'https://s3.amazonaws.com/eduvision'
+
+        # Mock the AWS signed request
+        mock_prepared_request = Mock()
+        mock_prepared_request.method = 'PUT'
+        mock_prepared_request.url = 'https://s3.amazonaws.com/eduvision/eduvision/12345678-1234-5678-1234-567812345678.png'
+        mock_prepared_request.body = b'mock_body'
+        mock_prepared_request.headers = {'Content-Type': 'image/jpeg'}
+
+        mock_aws_request = Mock()
+        mock_aws_request.prepare.return_value = mock_prepared_request
+        mock_get_aws_signed_request.return_value = mock_aws_request
 
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_put.return_value = mock_response
+        mock_request.return_value = mock_response
 
         img = Image.new('RGBA', (50, 50), color=(0, 255, 0, 128))
         img.format = 'PNG'
 
-        result = upload_image(img)
+        result = upload_image(img, "eduvision")
 
-        assert result == 'https://storage.example.com/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.png'
+        assert result == 'https://s3.amazonaws.com/eduvision/eduvision/12345678-1234-5678-1234-567812345678.png'
 
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     def test_upload_missing_s3_uri(self, mock_getenv):
@@ -151,100 +175,131 @@ class TestUploadImage:
         img.format = 'JPEG'
 
         with pytest.raises(MissingEnvironmentVariableError):
-            upload_image(img)
+            upload_image(img, "eduvision")
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.put')
+    @patch('lf_toolkit.evaluation.image_upload.requests.request')
+    @patch('lf_toolkit.evaluation.image_upload.get_aws_signed_request')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_server_error(self, mock_uuid, mock_getenv, mock_put):
+    def test_upload_server_error(self, mock_uuid, mock_getenv, mock_get_aws_signed_request, mock_request):
         """Test upload fails when server returns error"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
         mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
 
+        # Mock the AWS signed request
+        mock_prepared_request = Mock()
+        mock_prepared_request.method = 'PUT'
+        mock_prepared_request.url = 'https://s3.amazonaws.com/bucket/eduvision/12345678-1234-5678-1234-567812345678.jpeg'
+        mock_prepared_request.body = b'mock_body'
+        mock_prepared_request.headers = {'Content-Type': 'image/jpeg'}
+
+        mock_aws_request = Mock()
+        mock_aws_request.prepare.return_value = mock_prepared_request
+        mock_get_aws_signed_request.return_value = mock_aws_request
+
         mock_response = Mock()
         mock_response.status_code = 500
         mock_response.text = 'Internal Server Error'
-        mock_put.return_value = mock_response
+        mock_request.return_value = mock_response
 
         img = Image.new('RGB', (100, 100))
         img.format = 'JPEG'
 
         with pytest.raises(ImageUploadError) as exc_info:
-            upload_image(img)
+            upload_image(img, "eduvision")
 
         assert "Upload failed with status code 500" in str(exc_info.value)
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.put')
+    @patch('lf_toolkit.evaluation.image_upload.requests.request')
+    @patch('lf_toolkit.evaluation.image_upload.get_aws_signed_request')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_network_error(self, mock_uuid, mock_getenv, mock_put):
+    def test_upload_network_error(self, mock_uuid, mock_getenv, mock_get_aws_signed_request, mock_request):
         """Test upload fails on network error"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
         mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
 
-        mock_put.side_effect = requests.exceptions.ConnectionError('Connection failed')
+        # Mock the AWS signed request
+        mock_prepared_request = Mock()
+        mock_prepared_request.method = 'PUT'
+        mock_prepared_request.url = 'https://s3.amazonaws.com/bucket/eduvision/12345678-1234-5678-1234-567812345678.jpeg'
+        mock_prepared_request.body = b'mock_body'
+        mock_prepared_request.headers = {'Content-Type': 'image/jpeg'}
+
+        mock_aws_request = Mock()
+        mock_aws_request.prepare.return_value = mock_prepared_request
+        mock_get_aws_signed_request.return_value = mock_aws_request
+
+        mock_request.side_effect = requests.exceptions.ConnectionError('Connection failed')
 
         img = Image.new('RGB', (100, 100))
         img.format = 'JPEG'
 
         with pytest.raises(ImageUploadError) as exc_info:
-            upload_image(img)
+            upload_image(img, "eduvision")
 
         assert "Network error" in str(exc_info.value)
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.put')
+    @patch('lf_toolkit.evaluation.image_upload.requests.request')
+    @patch('lf_toolkit.evaluation.image_upload.get_aws_signed_request')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_timeout_error(self, mock_uuid, mock_getenv, mock_put):
+    def test_upload_timeout_error(self, mock_uuid, mock_getenv, mock_get_aws_signed_request, mock_request):
         """Test upload fails on timeout"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
         mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
 
-        mock_put.side_effect = requests.exceptions.Timeout('Request timed out')
+        # Mock the AWS signed request
+        mock_prepared_request = Mock()
+        mock_prepared_request.method = 'PUT'
+        mock_prepared_request.url = 'https://s3.amazonaws.com/bucket/eduvision/12345678-1234-5678-1234-567812345678.jpeg'
+        mock_prepared_request.body = b'mock_body'
+        mock_prepared_request.headers = {'Content-Type': 'image/jpeg'}
+
+        mock_aws_request = Mock()
+        mock_aws_request.prepare.return_value = mock_prepared_request
+        mock_get_aws_signed_request.return_value = mock_aws_request
+
+        mock_request.side_effect = requests.exceptions.Timeout('Request timed out')
 
         img = Image.new('RGB', (100, 100))
         img.format = 'JPEG'
 
         with pytest.raises(ImageUploadError) as exc_info:
-            upload_image(img)
+            upload_image(img, "eduvision")
 
         assert "Network error" in str(exc_info.value)
 
-    @patch('lf_toolkit.evaluation.image_upload.requests.put')
+    @patch('lf_toolkit.evaluation.image_upload.requests.request')
+    @patch('lf_toolkit.evaluation.image_upload.get_aws_signed_request')
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_image_no_format(self, mock_uuid, mock_getenv, mock_put):
+    def test_upload_image_no_format(self, mock_uuid, mock_getenv, mock_get_aws_signed_request, mock_request):
         """Test upload with image that has no format (defaults to PNG) uses UUID filename"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
         mock_getenv.return_value = 'https://s3.amazonaws.com/bucket/'
 
+        # Mock the AWS signed request
+        mock_prepared_request = Mock()
+        mock_prepared_request.method = 'PUT'
+        mock_prepared_request.url = 'https://s3.amazonaws.com/bucket/eduvision/12345678-1234-5678-1234-567812345678.png'
+        mock_prepared_request.body = b'mock_body'
+        mock_prepared_request.headers = {'Content-Type': 'image/png'}
+
+        mock_aws_request = Mock()
+        mock_aws_request.prepare.return_value = mock_prepared_request
+        mock_get_aws_signed_request.return_value = mock_aws_request
+
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_put.return_value = mock_response
+        mock_request.return_value = mock_response
 
         img = Image.new('RGB', (100, 100))
         img.format = None
 
-        result = upload_image(img)
+        result = upload_image(img, "eduvision")
 
-        assert result == 'https://s3.amazonaws.com/bucket/12345678-1234-5678-1234-567812345678.png'
-
-    @patch('lf_toolkit.evaluation.image_upload.requests.put')
-    @patch('lf_toolkit.evaluation.image_upload.os.getenv')
-    @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
-    def test_upload_verifies_correct_file_uploaded(self, mock_uuid, mock_getenv, mock_put):
-        """Test that the correct file data is sent in upload request"""
-        mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
-        mock_getenv.return_value = 'https://s3.amazonaws.com/bucket/'
-
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_put.return_value = mock_response
-
-        img = Image.new('RGB', (100, 100), color='blue')
-        img.format = 'JPEG'
-
-        upload_image(img)
+        assert result == 'https://s3.amazonaws.com/bucket/eduvision/12345678-1234-5678-1234-567812345678.png'
 
 
 class TestExceptionHierarchy:

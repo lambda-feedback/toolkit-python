@@ -113,10 +113,11 @@ def get_aws_signed_request(full_url, buffer, mime_type):
     return aws_request
 
 
-def upload_image(img: Image.Image) -> str:
+def upload_image(img: Image.Image, folder_name: str) -> str:
     """Upload PIL image with comprehensive MIME type validation
 
     Args:
+        folder_name: name of folder to save image
         img: PIL Image object to upload
 
     Returns:
@@ -133,7 +134,7 @@ def upload_image(img: Image.Image) -> str:
 
         filename: str = generate_file_name(img)
 
-        full_url = base_url + filename
+        full_url = os.path.join(base_url, folder_name, filename)
 
         if img.format is None:
             img.format = 'PNG'
@@ -174,5 +175,5 @@ if __name__ == "__main__":
     img.format = 'JPEG'
 
     # Execute
-    result = upload_image(img)
+    result = upload_image(img, "eduvision")
     print(result)
