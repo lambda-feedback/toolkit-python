@@ -91,6 +91,7 @@ class StreamServer(BaseServer):
                     break
 
                 response = await self.dispatch(data.decode("utf-8"))
+                print(f"Responding: {response}")  # and this
 
                 await io.write(response.encode("utf-8"))
             except anyio.EndOfStream:
@@ -101,5 +102,4 @@ class StreamServer(BaseServer):
                 break
             except Exception as e:
                 print(f"Exception: {e}")
-            finally:
-                await client.close()
+        await client.close()
