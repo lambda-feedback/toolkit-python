@@ -101,5 +101,6 @@ class StreamServer(BaseServer):
                 # print("Client disconnected")
                 break
             except Exception as e:
-                print(f"Exception: {e}")
+                # print(f"Exception: {e}")
+                break
         await client.close()
