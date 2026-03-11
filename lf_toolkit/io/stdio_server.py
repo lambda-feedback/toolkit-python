@@ -37,10 +37,11 @@ class StdioServer(StreamServer):
 
     def __init__(self, handler: Optional[Handler] = None):
         super().__init__(handler)
-        self._client = StdioClient()
+
 
     def wrap_io(self, client: StreamIO) -> StreamIO:
         return PrefixStreamIO(client)
 
     async def run(self):
+        self._client = StdioClient()
         await self._handle_client(self._client)
