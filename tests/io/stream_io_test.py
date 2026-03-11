@@ -175,3 +175,31 @@ class TestPrefixStreamIO:
 
         with pytest.raises(ValueError, match="Content-Length"):
             await prefix_io.read(4096)
+
+    @pytest.mark.anyio
+    async def test_large_payload_does_not_raise(self, stream):
+        """Payloads larger than 4096 bytes must be read without raising."""
+        prefix_io = PrefixStreamIO(stream)
+
+        payload = b"x" * 8192
+        header = f"Content-Length: {len(payload)}\r\n\r\n".encode()
+        stream.feed(header + payload)
+
+        result = await prefix_io.read(4096)
+        assert result == payload
+
+    @pytest.mark.anyio
+    async def test_exact_read_of_partial_chunks(self, stream):
+        """All bytes are read even when the underlying stream delivers chunks smaller than content_length."""
+        prefix_io = PrefixStreamIO(stream)
+
+        payload = b"a" * 100
+        header = f"Content-Length: {len(payload)}\r\n\r\n".encode()
+        # Feed header and payload as separate tiny chunks (10 bytes each)
+        full = header + payload
+        for i in range(0, len(full), 10):
+            stream.feed(full[i:i + 10])
+
+        result = await prefix_io.read(4096)
+        assert result == payload
+        assert len(result) == 100

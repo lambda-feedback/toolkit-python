@@ -63,10 +63,11 @@ class PrefixStreamIO:
         if content_length == 0:
             raise ValueError("Content-Length header not found or is zero")
 
-        if content_length > size:
-            raise ValueError("Content-Length is larger than the read size")
-
-        return await self.base.read(content_length)
+        data = b""
+        while len(data) < content_length:
+            chunk = await self.base.read(content_length - len(data))
+            data += chunk
+        return data
 
     async def write(self, data: bytes):
         response_headers_str = f"Content-Length: {len(data)}\r\n\r\n"
