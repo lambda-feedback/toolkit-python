@@ -84,23 +84,27 @@ class StreamServer(BaseServer):
 
         while True:
             try:
+                import sys
+                print("waiting for data...", file=sys.stderr, flush=True)
                 data = await io.read(4096)
+                print(f"got data: {data[:80]}", file=sys.stderr, flush=True)
 
                 if not data:
-                    # print("Received empty data")
                     break
 
+                print("dispatching...", file=sys.stderr, flush=True)
                 response = await self.dispatch(data.decode("utf-8"))
-                print(f"Responding: {response}")  # and this
+                print(f"got response: {str(response)[:80]}", file=sys.stderr, flush=True)
 
                 await io.write(response.encode("utf-8"))
+                print("wrote response", file=sys.stderr, flush=True)
             except anyio.EndOfStream:
-                # print("Client disconnected")
                 break
             except anyio.ClosedResourceError:
-                # print("Client disconnected")
                 break
             except Exception as e:
-                # print(f"Exception: {e}")
+                import traceback
+                traceback.print_exc(file=sys.stderr)
                 break
+
         await client.close()
