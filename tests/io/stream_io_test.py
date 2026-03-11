@@ -2,6 +2,7 @@ import pytest
 import anyio
 
 from lf_toolkit.io.stream_io import StreamIO, PrefixStreamIO, StreamServer
+from lf_toolkit.io.stdio_server import StdioServer
 
 
 @pytest.fixture
@@ -9,6 +10,9 @@ def anyio_backend():
     return "asyncio"
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def make_framed_message(payload: str) -> bytes:
     """Wrap a JSON string in Content-Length framing."""
@@ -45,58 +49,11 @@ class FakeStreamIO(StreamIO):
         self.close_count += 1
 
 
-class EchoServer(StreamServer):
-    """
-    Concrete StreamServer for testing.
-    - run() is required by BaseServer (abstract) but not used in tests
-      since we call _handle_client directly.
-    - dispatch() is overridden to echo the raw request back, bypassing
-      the real JsonRpcHandler so tests stay self-contained.
-    """
-
-    async def run(self):
-        pass
-
-    async def dispatch(self, data: str) -> str:
-        return data
-
-
-class BuggyStreamServer(StreamServer):
-    """
-    Reproduces the original bug by overriding _handle_client with
-    close() inside the finally block.
-    """
-
-    async def run(self):
-        pass
-
-    async def dispatch(self, data: str) -> str:
-        return data
-
-    async def _handle_client(self, client: StreamIO):
-        io = self.wrap_io(client)
-        while True:
-            try:
-                data = await io.read(4096)
-                if not data:
-                    break
-                response = await self.dispatch(data.decode("utf-8"))
-                await io.write(response.encode("utf-8"))
-            except anyio.EndOfStream:
-                break
-            except anyio.ClosedResourceError:
-                break
-            except Exception as e:
-                print(f"Exception: {e}")
-            finally:
-                await client.close()  # BUG: closes after every message
-
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
 
-class TestStreamServer:
+class TestStdioServer:
 
     @pytest.fixture
     def stream(self):
@@ -104,11 +61,7 @@ class TestStreamServer:
 
     @pytest.fixture
     def server(self):
-        return EchoServer()
-
-    @pytest.fixture
-    def buggy_server(self):
-        return BuggyStreamServer()
+        return StdioServer()
 
     @pytest.mark.anyio
     async def test_handles_multiple_messages(self, stream, server):
@@ -116,9 +69,9 @@ class TestStreamServer:
         Core fix test: the server must process multiple messages in a single
         session without closing the connection between them.
         """
-        stream.feed(make_framed_message('{"command": "eval", "id": 1}'))
-        stream.feed(make_framed_message('{"command": "eval", "id": 2}'))
-        stream.feed(make_framed_message('{"command": "eval", "id": 3}'))
+        stream.feed(make_framed_message('{"jsonrpc":"2.0","method":"eval","params":{},"id":1}'))
+        stream.feed(make_framed_message('{"jsonrpc":"2.0","method":"eval","params":{},"id":2}'))
+        stream.feed(make_framed_message('{"jsonrpc":"2.0","method":"eval","params":{},"id":3}'))
 
         await server._handle_client(stream)
 
@@ -133,8 +86,8 @@ class TestStreamServer:
         The client connection should be closed exactly once — after the loop
         exits — not once per message.
         """
-        stream.feed(make_framed_message('{"id": 1}'))
-        stream.feed(make_framed_message('{"id": 2}'))
+        stream.feed(make_framed_message('{"jsonrpc":"2.0","method":"eval","params":{},"id":1}'))
+        stream.feed(make_framed_message('{"jsonrpc":"2.0","method":"eval","params":{},"id":2}'))
 
         await server._handle_client(stream)
 
@@ -144,31 +97,16 @@ class TestStreamServer:
         )
 
     @pytest.mark.anyio
-    async def test_buggy_server_closes_after_each_message(self, stream, buggy_server):
-        """
-        Demonstrates the original bug: close() in the finally block causes
-        the stream to be closed after every message, not just at the end.
-        """
-        stream.feed(make_framed_message('{"id": 1}'))
-        stream.feed(make_framed_message('{"id": 2}'))
-
-        await buggy_server._handle_client(stream)
-
-        assert stream.close_count > 1, (
-            "Expected buggy server to call close() more than once, "
-            "confirming the bug exists in the original code."
-        )
-
-    @pytest.mark.anyio
     async def test_single_message(self, stream, server):
         """A single message round-trip should work correctly."""
-        payload = '{"command": "eval", "response": "test"}'
-        stream.feed(make_framed_message(payload))
+        stream.feed(make_framed_message('{"jsonrpc":"2.0","method":"eval","params":{},"id":1}'))
 
         await server._handle_client(stream)
 
         assert len(stream.responses) == 1
-        assert payload.encode() in stream.responses[0]
+        # Response is a framed JSON-RPC envelope
+        assert b"Content-Length:" in stream.responses[0]
+        assert b"jsonrpc" in stream.responses[0]
 
     @pytest.mark.anyio
     async def test_closes_on_empty_stream(self, stream, server):
@@ -179,10 +117,10 @@ class TestStreamServer:
 
     @pytest.mark.anyio
     async def test_response_content(self, stream, server):
-        """Verify the actual response content is correct across messages."""
+        """Verify a response is returned for each message sent."""
         messages = [
-            '{"id": 1, "command": "eval"}',
-            '{"id": 2, "command": "preview"}',
+            '{"jsonrpc":"2.0","method":"eval","params":{},"id":1}',
+            '{"jsonrpc":"2.0","method":"preview","params":{},"id":2}',
         ]
 
         for msg in messages:
@@ -191,8 +129,9 @@ class TestStreamServer:
         await server._handle_client(stream)
 
         assert len(stream.responses) == 2
-        for i, msg in enumerate(messages):
-            assert msg.encode() in stream.responses[i]
+        for response in stream.responses:
+            assert b"Content-Length:" in response
+            assert b"jsonrpc" in response
 
 
 class TestPrefixStreamIO:
