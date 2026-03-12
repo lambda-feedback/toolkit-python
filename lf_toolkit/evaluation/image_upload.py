@@ -26,7 +26,7 @@ FORMAT_TO_MIME: Dict[str, str] = {
     'JPG': 'image/jpeg',
     'PNG': 'image/png',
     'GIF': 'image/gif',
-    "bmp": 'image/bmp'
+    "BMP": 'image/bmp'
 }
 
 class ImageUploadError(Exception):
