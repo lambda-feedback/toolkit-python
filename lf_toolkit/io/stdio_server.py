@@ -16,8 +16,8 @@ class StdioClient(StreamIO):
 
     def __init__(self):
         self.stream = StapledByteStream(
-            FileWriteStream(sys.stdout),
-            FileReadStream(sys.stdin),
+            FileWriteStream(sys.stdout.buffer),
+            FileReadStream(sys.stdin.buffer),
         )
 
     async def read(self, size: int) -> bytes:
@@ -43,5 +43,6 @@ class StdioServer(StreamServer):
         return PrefixStreamIO(client)
 
     async def run(self):
+        print("StdioServer started", file=sys.stderr, flush=True)
         self._client = StdioClient()
         await self._handle_client(self._client)

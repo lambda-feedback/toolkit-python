@@ -1,3 +1,6 @@
+import subprocess
+import sys
+
 import pytest
 import anyio
 
@@ -203,3 +206,32 @@ class TestPrefixStreamIO:
         result = await prefix_io.read(4096)
         assert result == payload
         assert len(result) == 100
+
+
+class TestStdioServerSubprocess:
+
+    def test_binary_pipe_roundtrip(self):
+        """
+        Spawn the StdioServer as a subprocess and pipe a framed JSON-RPC
+        request to its stdin (as raw bytes). Confirms sys.stdin.buffer /
+        sys.stdout.buffer is used — text-mode streams would break this.
+        """
+        msg = b'{"jsonrpc":"2.0","id":1,"method":"eval","params":{}}'
+        frame = f"Content-Length: {len(msg)}\r\n\r\n".encode() + msg
+
+        proc = subprocess.Popen(
+            [sys.executable, "-c",
+             "import anyio; from lf_toolkit.io.stdio_server import StdioServer; "
+             "anyio.run(StdioServer().run)"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        stdout, stderr = proc.communicate(input=frame, timeout=5)
+
+        # Must receive a framed response
+        assert b"Content-Length:" in stdout, (
+            f"No framed response received.\nstderr: {stderr.decode()}"
+        )
+        assert b"jsonrpc" in stdout
