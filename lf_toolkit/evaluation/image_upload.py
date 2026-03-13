@@ -101,7 +101,7 @@ def get_aws_signed_request(full_url, buffer, mime_type):
     aws_request = AWSRequest(
         method='PUT',
         url=full_url,
-        data=buffer,
+        data=data,
         headers=headers
     )
 

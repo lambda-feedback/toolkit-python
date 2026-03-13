@@ -2,6 +2,7 @@ import sys
 
 from typing import Optional
 
+import anyio
 from anyio.streams.file import FileReadStream
 from anyio.streams.file import FileWriteStream
 from anyio.streams.stapled import StapledByteStream
@@ -15,9 +16,10 @@ from .stream_io import StreamServer
 class StdioClient(StreamIO):
 
     def __init__(self):
+        self._stdout_buffer = sys.stdout.buffer
         self.stream = StapledByteStream(
-            FileWriteStream(sys.stdout),
-            FileReadStream(sys.stdin),
+            FileWriteStream(self._stdout_buffer),
+            FileReadStream(sys.stdin.buffer),
         )
 
     async def read(self, size: int) -> bytes:
@@ -25,7 +27,7 @@ class StdioClient(StreamIO):
 
     async def write(self, data: bytes):
         await self.stream.send(data)
-        await self.stream.flush()
+        await anyio.to_thread.run_sync(self._stdout_buffer.flush)
 
     async def close(self):
         await self.stream.aclose()
@@ -37,10 +39,11 @@ class StdioServer(StreamServer):
 
     def __init__(self, handler: Optional[Handler] = None):
         super().__init__(handler)
-        self._client = StdioClient()
 
     def wrap_io(self, client: StreamIO) -> StreamIO:
         return PrefixStreamIO(client)
 
     async def run(self):
+        print("StdioServer started", file=sys.stderr, flush=True)
+        self._client = StdioClient()
         await self._handle_client(self._client)

@@ -4,6 +4,7 @@ from jsonrpcserver import Error
 from jsonrpcserver import Success
 from jsonrpcserver import async_dispatch
 
+from ..shared import Command
 from .handler import Handler
 
 
@@ -23,10 +24,10 @@ class JsonRpcHandler(Handler):
         )
 
 
-def jsonrpc_handler(handler: Handler, name: str):
+def jsonrpc_handler(handler: Handler, name: Command):
     async def wrapped(req: dict):
         try:
-            result = await handler.handle(name, req)
+            result = await handler.handle(name, {"params": req})
             return Success(result)
         except Exception as e:
             return Error(0, str(e), e)
