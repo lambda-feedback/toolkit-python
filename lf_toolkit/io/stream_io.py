@@ -1,3 +1,4 @@
+import sys
 from abc import ABC
 from abc import abstractmethod
 
@@ -45,23 +46,29 @@ class PrefixStreamIO:
         self.base = base
 
     async def read(self, size: int) -> bytes:
-        headers = b""
-        while b"\r\n\r\n" not in headers:
-            headers += await self.base.read(1)
-        headers_str = headers.decode("utf-8").strip()
-
-        content_length = 0
-        lines = headers_str.split("\r\n")
-        for line in lines:
-            line = line.strip()
-
+        # Scan line-by-line for Content-Length:, skipping any stray output.
+        content_length = None
+        while True:
+            line = b""
+            while not line.endswith(b"\n"):
+                line += await self.base.read(1)
+            line = line.decode("utf-8").strip()
             if line.startswith("Content-Length:"):
-                parts = line.split(":", 1)
-                content_length = int(parts[1].strip())
+                _, _, value = line.partition(":")
+                content_length = int(value.strip())
                 break
+            # skip unrecognised lines (stray stdout, other headers)
 
-        if content_length == 0:
+        if content_length is None or content_length == 0:
             raise ValueError("Content-Length header not found or is zero")
+
+        # Drain remaining header lines until the blank separator.
+        while True:
+            line = b""
+            while not line.endswith(b"\n"):
+                line += await self.base.read(1)
+            if line.strip() == b"":
+                break
 
         data = b""
         while len(data) < content_length:
@@ -85,25 +92,18 @@ class StreamServer(BaseServer):
 
         while True:
             try:
-                import sys
-                print("waiting for data...", file=sys.stderr, flush=True)
                 data = await io.read(4096)
-                print(f"got data: {data[:80]}", file=sys.stderr, flush=True)
 
                 if not data:
                     break
 
-                print("dispatching...", file=sys.stderr, flush=True)
                 response = await self.dispatch(data.decode("utf-8"))
-                print(f"got response: {str(response)[:80]}", file=sys.stderr, flush=True)
-
                 await io.write(response.encode("utf-8"))
-                print("wrote response", file=sys.stderr, flush=True)
             except anyio.EndOfStream:
                 break
             except anyio.ClosedResourceError:
                 break
-            except Exception as e:
+            except Exception:
                 import traceback
                 traceback.print_exc(file=sys.stderr)
                 break

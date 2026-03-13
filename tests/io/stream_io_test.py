@@ -171,12 +171,14 @@ class TestPrefixStreamIO:
 
     @pytest.mark.anyio
     async def test_raises_on_missing_content_length(self, stream):
-        """PrefixStreamIO should raise if Content-Length header is absent."""
+        """PrefixStreamIO should raise if stream ends without a Content-Length header."""
         prefix_io = PrefixStreamIO(stream)
 
         stream.feed(b"X-Custom-Header: something\r\n\r\n")
 
-        with pytest.raises(ValueError, match="Content-Length"):
+        # Resilient scanner skips unrecognised lines and raises EndOfStream
+        # when the stream is exhausted with no Content-Length seen.
+        with pytest.raises(anyio.EndOfStream):
             await prefix_io.read(4096)
 
     @pytest.mark.anyio
@@ -187,6 +189,19 @@ class TestPrefixStreamIO:
         payload = b"x" * 8192
         header = f"Content-Length: {len(payload)}\r\n\r\n".encode()
         stream.feed(header + payload)
+
+        result = await prefix_io.read(4096)
+        assert result == payload
+
+    @pytest.mark.anyio
+    async def test_skips_stray_output_before_content_length(self, stream):
+        """Stray lines before Content-Length: are silently skipped."""
+        prefix_io = PrefixStreamIO(stream)
+
+        payload = b'{"jsonrpc":"2.0","id":1,"result":"ok"}'
+        stray = b"Loading model...\nReady.\n"
+        header = f"Content-Length: {len(payload)}\r\n\r\n".encode()
+        stream.feed(stray + header + payload)
 
         result = await prefix_io.read(4096)
         assert result == payload

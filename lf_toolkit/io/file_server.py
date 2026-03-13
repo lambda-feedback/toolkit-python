@@ -10,6 +10,9 @@ from .handler import Handler
 
 class FileHandler(Handler):
 
+    def __init__(self):
+        super().__init__()
+
     async def dispatch(self, req: str) -> str:
         request = ujson.loads(req)
         command = request.get("command", None)

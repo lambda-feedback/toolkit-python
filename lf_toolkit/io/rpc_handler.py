@@ -11,6 +11,7 @@ from .handler import Handler
 class JsonRpcHandler(Handler):
 
     def __init__(self):
+        super().__init__()
         self._methods = {
             name: jsonrpc_handler(self, name) for name in ["eval", "preview"]
         }

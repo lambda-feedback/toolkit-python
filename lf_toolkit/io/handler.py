@@ -14,7 +14,8 @@ from ..shared import Params
 
 class Handler(ABC):
 
-    _handlers: Dict[str, Callable] = {}
+    def __init__(self):
+        self._handlers: Dict[str, Callable] = {}
 
     @abstractmethod
     async def dispatch(self, req: str) -> str:
