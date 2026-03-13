@@ -2,6 +2,7 @@ import sys
 
 from typing import Optional
 
+import anyio
 from anyio.streams.file import FileReadStream
 from anyio.streams.file import FileWriteStream
 from anyio.streams.stapled import StapledByteStream
@@ -25,7 +26,7 @@ class StdioClient(StreamIO):
 
     async def write(self, data: bytes):
         await self.stream.send(data)
-        await self.stream.flush()
+        await anyio.to_thread.run_sync(sys.stdout.buffer.flush)
 
     async def close(self):
         await self.stream.aclose()
