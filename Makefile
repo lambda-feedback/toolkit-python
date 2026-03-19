@@ -20,3 +20,6 @@ clean: clean_build
 
 fresh: clean
 	rm -rf .venv/
+
+generate-mued-types:
+	MUED_SPEC_VERSION=$(MUED_SPEC_VERSION) MUED_SPEC_URL=$(MUED_SPEC_URL) poetry run python scripts/generate_mued_types.py
