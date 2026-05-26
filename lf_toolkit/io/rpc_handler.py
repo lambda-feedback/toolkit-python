@@ -12,7 +12,7 @@ class JsonRpcHandler(Handler):
 
     def __init__(self):
         self._methods = {
-            name: jsonrpc_handler(self, name) for name in ["eval", "preview"]
+            name: jsonrpc_handler(self, name) for name in ["eval", "preview", "healthcheck"]
         }
 
     async def dispatch(self, req: str) -> str:
