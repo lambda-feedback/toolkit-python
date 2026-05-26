@@ -57,6 +57,10 @@ class Handler(ABC):
 
         return await self._call_user_handler("preview", response, request_params)
 
+    async def handle_healthcheck(self, req: dict):
+        from .healthcheck import run_healthcheck
+        return await anyio.to_thread.run_sync(run_healthcheck)
+
     async def handle(self, name: Command, req: dict) -> dict:
         handler = getattr(self, f"handle_{name}", None)
 
