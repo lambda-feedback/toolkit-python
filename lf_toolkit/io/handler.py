@@ -59,8 +59,7 @@ class Handler(ABC):
 
     async def handle_healthcheck(self, req: dict):
         from .healthcheck import run_healthcheck
-        result = await anyio.to_thread.run_sync(run_healthcheck)
-        return {"status": "OK" if result["tests_passed"] else "DEGRADED"}
+        return await anyio.to_thread.run_sync(run_healthcheck)
 
     async def handle(self, name: Command, req: dict) -> dict:
         handler = getattr(self, f"handle_{name}", None)
