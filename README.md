@@ -118,6 +118,8 @@ result.to_dict()
 # {"is_correct": True, "feedback": "Well done!", "response_latex": "...", ...}
 ```
 
+Tags (e.g. `"hint"`, `"error"`) group feedback messages and are used for data analytics, so using consistent tag names across evaluation functions enables meaningful aggregation and reporting.
+
 ### `chat.ChatResult`
 
 ```python

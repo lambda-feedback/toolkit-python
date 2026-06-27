@@ -24,7 +24,7 @@ def eval_function(response: str, answer: str, params: Params) -> Result:
     return result
 ```
 
-Feedback items are grouped by tag. Common tags are `"hint"` and `"error"`. All messages for a tag are joined with `<br>` when displayed to the student.
+Feedback items are grouped by tag. Common tags are `"hint"` and `"error"`. All messages for a tag are joined with `<br>` when displayed to the student. Tags are also used for data analytics purposes, so consistent tag names across evaluation functions enable meaningful aggregation and reporting.
 
 ## Feedback in the constructor
 
