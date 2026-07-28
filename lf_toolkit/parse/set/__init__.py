@@ -15,3 +15,4 @@ from .printer import LatexPrinter
 from .printer import UnicodePrinter
 from .transformer import SymPyBooleanTransformer
 from .transformer import SymPyTransformer
+from .ast import SetNotation

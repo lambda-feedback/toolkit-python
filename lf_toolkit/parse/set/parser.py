@@ -17,6 +17,7 @@ from .ast import SymmetricDifference
 from .ast import Term
 from .ast import Union
 from .ast import Universe
+from .ast import SetNotation
 
 
 class ParseError(Exception):
@@ -105,3 +106,6 @@ class SetTransformer(Transformer):
 
     def group(self, items):
         return Group(items[1] if self.latex else items[0])
+
+    def set_notation(self, items):
+        return SetNotation(tuple(str(i) for i in items))

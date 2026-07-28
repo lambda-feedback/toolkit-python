@@ -9,8 +9,9 @@ from sympy import SymmetricDifference
 from sympy import Union
 from sympy import UniversalSet
 from sympy import Xor
+from sympy import Integer
 
-from .ast import SetTransformer
+from .ast import SetTransformer, SetNotation
 
 
 class SymPyTransformer(SetTransformer):
@@ -42,6 +43,9 @@ class SymPyTransformer(SetTransformer):
 
     def Universe(self):
         return UniversalSet
+
+    def SetNotation(self, elements):
+        return FiniteSet(*[Integer(e) if str(e).isdigit() else Symbol(e) for e in elements])
 
 
 class SymPyBooleanTransformer(SetTransformer):

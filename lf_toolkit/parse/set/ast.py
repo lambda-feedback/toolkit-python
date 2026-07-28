@@ -1,6 +1,7 @@
 from abc import ABC
 from abc import abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Tuple
 
 
 @dataclass
@@ -58,6 +59,9 @@ class SymmetricDifference(BinaryOp):
 class Term(Set):
     value: str
 
+@dataclass
+class SetNotation(Set):
+    elements: Tuple[str, ...] = field(default_factory=tuple)
 
 class Universe(Set):
     pass
@@ -79,6 +83,9 @@ class SetTransformer(ABC):
         if isinstance(node, BinaryOp):
             transformed_children.append(self.transform(node.left))
             transformed_children.append(self.transform(node.right))
+
+        if isinstance(node, SetNotation):
+            transformed_children.append(node.elements)
 
         # Dispatch to the specific transformation method based on node type
         method_name = type(node).__name__
