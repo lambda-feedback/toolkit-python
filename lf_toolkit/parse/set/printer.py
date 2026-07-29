@@ -1,5 +1,5 @@
 from .ast import Set
-from .ast import SetTransformer
+from .ast import SetTransformer, SetNotation
 
 
 class LatexPrinter(SetTransformer):
@@ -30,6 +30,9 @@ class LatexPrinter(SetTransformer):
     def Universe(self):
         return "\\Omega"
 
+    def SetNotation(self, elements):
+        return "\\{" + ",".join(elements) + "\\}"
+
 
 class ASCIIPrinter(SetTransformer):
     def print(self, node: Set):
@@ -58,6 +61,9 @@ class ASCIIPrinter(SetTransformer):
 
     def Universe(self):
         return "Omega"
+
+    def SetNotation(self, elements):
+        return "{" + ",".join(elements) + "}"
 
 
 class UnicodePrinter(SetTransformer):

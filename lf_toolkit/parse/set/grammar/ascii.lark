@@ -22,7 +22,10 @@ start: expression
 
 ?group: "(" expression ")" -> group
 
-?term: ID | universe
+?term: ID | universe | set_notation
+
+set_notation: "{" (ELEMENT ("," ELEMENT)*)? "}"
 
 ID: /[A-Z]/
 universe: "Ω" | "Omega"
+ELEMENT: /[A-Za-z0-9]+/
