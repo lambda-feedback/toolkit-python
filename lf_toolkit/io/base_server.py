@@ -7,6 +7,9 @@ from typing import Callable
 from typing import Optional
 from typing import Union
 
+from ..chat import ChatHealthResponse
+from ..chat import ChatRequest
+from ..chat import ChatResponse
 from ..evaluation import Result as EvaluationResult
 from ..preview import Result as PreviewResult
 from ..shared import Params
@@ -20,6 +23,14 @@ EvaluationFunction = Callable[
 
 PreviewFunction = Callable[
     [Any, Params], Union[PreviewResult, Awaitable[PreviewResult]]
+]
+
+ChatFunction = Callable[
+    [ChatRequest], Union[ChatResponse, Awaitable[ChatResponse]]
+]
+
+ChatHealthFunction = Callable[
+    [], Union[ChatHealthResponse, Awaitable[ChatHealthResponse]]
 ]
 
 
@@ -42,6 +53,12 @@ class BaseServer(ABC):
 
     def preview(self, fn: PreviewFunction):
         return handler_decorator(self._handler, "preview", fn)
+
+    def chat(self, fn: ChatFunction):
+        return handler_decorator(self._handler, "chat", fn)
+
+    def chat_health(self, fn: ChatHealthFunction):
+        return handler_decorator(self._handler, "chat/health", fn)
 
 
 def handler_decorator(registry: Handler, name: str, fn):
