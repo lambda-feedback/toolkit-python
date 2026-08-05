@@ -179,6 +179,22 @@ Required environment variables:
 | `AWS_SESSION_TOKEN` | (optional) Session token |
 | `AWS_REGION` | AWS region (default: `eu-west-2`) |
 
+## Progress Callbacks
+
+Report free-form progress updates during evaluation. When running under [shimmy](https://github.com/lambda-feedback/shimmy) with progress callbacks enabled, these are relayed to the caller's `callbackUrl` as `progress`-stage events. The call is fire-and-forget (non-blocking) and is a safe no-op when not running under shimmy, e.g. locally or in tests:
+
+```python
+from lf_toolkit.evaluation.progress import report_progress
+
+def evaluate(response, answer, params):
+    report_progress("Parsing response...")
+    ...
+    report_progress("Checking equivalence...", data={"step": 2})
+    ...
+```
+
+`report_progress` reads the sidecar URL shimmy injects via the `EVAL_PROGRESS_URL` environment variable. It never raises and never blocks the evaluation function, even if the callback fails or shimmy isn't present.
+
 ## Set Notation Parser
 
 Parse and evaluate set expressions (requires `parsing` extra):

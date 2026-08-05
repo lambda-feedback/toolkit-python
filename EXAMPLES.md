@@ -104,6 +104,23 @@ async def eval_function(response: str, answer: str, params: Params) -> Result:
     return Result(is_correct=result)
 ```
 
+## Reporting progress during evaluation
+
+```python
+from lf_toolkit.evaluation.progress import report_progress
+
+def eval_function(response: str, answer: str, params: Params) -> Result:
+    report_progress("Parsing response...")
+    parsed = parse(response)
+
+    report_progress("Checking equivalence...", data={"step": 2})
+    is_correct = check_equivalence(parsed, answer)
+
+    return Result(is_correct=is_correct)
+```
+
+`report_progress` is a no-op outside of shimmy (e.g. when running `eval_function` directly in a test), so it's safe to leave calls in place everywhere.
+
 ## Testing a Result
 
 ```python
