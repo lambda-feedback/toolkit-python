@@ -1,11 +1,16 @@
 import logging
 import threading
+import time
 from unittest.mock import Mock, patch
 
 import pytest
 import requests
 
-from lf_toolkit.evaluation.progress import _post_progress, report_progress
+from lf_toolkit.evaluation.progress import (
+    _post_progress,
+    flush_progress,
+    report_progress,
+)
 
 
 class TestReportProgress:
@@ -16,7 +21,7 @@ class TestReportProgress:
 
         with patch("lf_toolkit.evaluation.progress.requests.post") as mock_post:
             report_progress("hello")
-            _wait_for_executor()
+            flush_progress()
 
         mock_post.assert_not_called()
 
@@ -25,7 +30,7 @@ class TestReportProgress:
 
         with patch("lf_toolkit.evaluation.progress.requests.post") as mock_post:
             report_progress("")
-            _wait_for_executor()
+            flush_progress()
 
         mock_post.assert_not_called()
 
@@ -35,7 +40,7 @@ class TestReportProgress:
         with patch("lf_toolkit.evaluation.progress.requests.post") as mock_post:
             mock_post.return_value = Mock(ok=True)
             report_progress("evaluating step 1")
-            _wait_for_executor()
+            flush_progress()
 
         mock_post.assert_called_once_with(
             "http://127.0.0.1:9999",
@@ -49,7 +54,7 @@ class TestReportProgress:
         with patch("lf_toolkit.evaluation.progress.requests.post") as mock_post:
             mock_post.return_value = Mock(ok=True)
             report_progress("evaluating step 2", data={"step": 2})
-            _wait_for_executor()
+            flush_progress()
 
         mock_post.assert_called_once_with(
             "http://127.0.0.1:9999",
@@ -72,6 +77,28 @@ class TestReportProgress:
             report_progress("hello")  # must not block on slow_post
 
         release_event.set()
+        flush_progress()
+
+    def test_delivers_in_call_order(self, monkeypatch):
+        """A single worker serializes delivery, so events reach shimmy's
+        sidecar in the order report_progress() was called - never racing
+        each other across threads and arriving out of order."""
+        monkeypatch.setenv("EVAL_PROGRESS_URL", "http://127.0.0.1:9999")
+
+        seen = []
+
+        def recording_post(url, json, timeout):
+            seen.append(json["message"])
+            return Mock(ok=True)
+
+        with patch(
+            "lf_toolkit.evaluation.progress.requests.post", side_effect=recording_post
+        ):
+            for i in range(5):
+                report_progress(f"step {i}")
+            flush_progress()
+
+        assert seen == [f"step {i}" for i in range(5)]
 
 
 class TestPostProgress:
@@ -106,17 +133,50 @@ class TestPostProgress:
         assert caplog.text == ""
 
 
-def _wait_for_executor():
-    """Block until all currently-submitted background progress posts finish."""
-    from lf_toolkit.evaluation.progress import _executor
+class TestFlushProgress:
+    """Test suite for flush_progress"""
 
-    _executor.shutdown(wait=True)
+    def test_noop_when_nothing_pending(self):
+        # must return promptly with no pending reports, not block on anything
+        start = time.monotonic()
+        flush_progress(timeout=5)
+        assert time.monotonic() - start < 1
 
-    # Re-create the executor since shutdown() is terminal, so later tests
-    # in this module can still submit new work.
-    import lf_toolkit.evaluation.progress as progress_module
-    from concurrent.futures import ThreadPoolExecutor
+    def test_waits_for_pending_report_to_complete(self, monkeypatch):
+        monkeypatch.setenv("EVAL_PROGRESS_URL", "http://127.0.0.1:9999")
 
-    progress_module._executor = ThreadPoolExecutor(
-        max_workers=2, thread_name_prefix="lf-progress"
-    )
+        delivered = threading.Event()
+
+        def slow_post(*args, **kwargs):
+            time.sleep(0.05)
+            delivered.set()
+            return Mock(ok=True)
+
+        with patch(
+            "lf_toolkit.evaluation.progress.requests.post", side_effect=slow_post
+        ):
+            report_progress("hello")
+            flush_progress(timeout=1)
+
+        assert delivered.is_set()
+
+    def test_bounded_by_timeout(self, monkeypatch):
+        monkeypatch.setenv("EVAL_PROGRESS_URL", "http://127.0.0.1:9999")
+
+        release_event = threading.Event()
+
+        def slow_post(*args, **kwargs):
+            release_event.wait(timeout=5)
+            return Mock(ok=True)
+
+        with patch(
+            "lf_toolkit.evaluation.progress.requests.post", side_effect=slow_post
+        ):
+            report_progress("hello")
+
+            start = time.monotonic()
+            flush_progress(timeout=0.05)
+            elapsed = time.monotonic() - start
+
+        assert elapsed < 1, "flush_progress must not block past its timeout"
+        release_event.set()

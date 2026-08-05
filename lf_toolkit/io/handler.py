@@ -8,6 +8,7 @@ from typing import Dict
 import anyio
 
 from ..evaluation import Result as EvaluationResult
+from ..evaluation.progress import flush_progress
 from ..shared import Command
 from ..shared import Params
 
@@ -36,6 +37,14 @@ class Handler(ABC):
                 return await anyio.to_thread.run_sync(handler, *args, **kwargs)
         except Exception as e:
             raise ValueError(f"Error calling user handler for '{req}': {e}")
+        finally:
+            # Give any report_progress() calls the handler made a bounded
+            # window to actually reach shimmy's sidecar before the RPC
+            # response (carrying the Result) goes out - otherwise a
+            # straggler dispatched near the end of the handler can lose the
+            # race against shimmy detaching its progress relay. Runs off
+            # the event loop thread since flush_progress blocks.
+            await anyio.to_thread.run_sync(flush_progress)
 
     async def handle_eval(self, req: dict):
         params = req["params"]
