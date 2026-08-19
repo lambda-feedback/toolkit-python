@@ -26,11 +26,10 @@ class NewlineStreamIO:
 
     async def read(self, size: int) -> bytes:
         data = b""
-        while len(data) < size:
-            chunk = await self.base.read(1)
-            if chunk == b"\n":
-                break
+        chunk = await self.base.read(1)
+        while chunk != b"\n":
             data += chunk
+            chunk = await self.base.read(1)
         return data
 
     async def write(self, data: bytes):

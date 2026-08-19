@@ -1,11 +1,14 @@
+import json
 import subprocess
 import sys
 
 import pytest
 import anyio
+import ujson
 
-from lf_toolkit.io.stream_io import StreamIO, PrefixStreamIO, StreamServer
+from lf_toolkit.io.stream_io import StreamIO, PrefixStreamIO, NewlineStreamIO, StreamServer
 from lf_toolkit.io.stdio_server import StdioServer
+from lf_toolkit.io.ipc_server import IPCServer
 
 
 @pytest.fixture
@@ -22,6 +25,11 @@ def make_framed_message(payload: str) -> bytes:
     body = payload.encode("utf-8")
     header = f"Content-Length: {len(body)}\r\n\r\n".encode("utf-8")
     return header + body
+
+
+def make_newline_message(payload: str) -> bytes:
+    """Wrap a JSON string in newline framing (as used by NewlineStreamIO)."""
+    return payload.encode("utf-8") + b"\n"
 
 
 class FakeStreamIO(StreamIO):
@@ -206,6 +214,144 @@ class TestPrefixStreamIO:
         result = await prefix_io.read(4096)
         assert result == payload
         assert len(result) == 100
+
+
+class TestNewlineStreamIO:
+
+    @pytest.fixture
+    def stream(self):
+        return FakeStreamIO()
+
+    @pytest.mark.anyio
+    async def test_framing_round_trip(self, stream):
+        """NewlineStreamIO correctly encodes and decodes newline framing."""
+        newline_io = NewlineStreamIO(stream)
+
+        payload = b'{"command": "eval"}'
+        stream.feed(payload + b"\n")
+
+        result = await newline_io.read(4096)
+        assert result == payload
+
+    @pytest.mark.anyio
+    async def test_write_appends_newline(self, stream):
+        """NewlineStreamIO write appends a trailing newline delimiter."""
+        newline_io = NewlineStreamIO(stream)
+
+        payload = b'{"result": "ok"}'
+        await newline_io.write(payload)
+
+        assert len(stream.responses) == 1
+        assert stream.responses[0] == payload + b"\n"
+
+    @pytest.mark.anyio
+    async def test_large_payload_does_not_truncate(self, stream):
+        """
+        Regression test for the truncation bug: a message whose framed byte
+        length exceeds the read() size hint (4096, as hardcoded by
+        StreamServer._handle_client) must still be read in full, up to the
+        real newline delimiter, not cut off at 4096 bytes.
+        """
+        newline_io = NewlineStreamIO(stream)
+
+        payload = b'{"data": "' + b"x" * 8192 + b'"}'
+        stream.feed(payload + b"\n")
+
+        result = await newline_io.read(4096)
+        assert result == payload
+        assert len(result) > 4096
+
+    @pytest.mark.anyio
+    async def test_size_hint_does_not_cap_read_length(self, stream):
+        """
+        The `size` argument is vestigial (interface parity with
+        StreamIO.read(size) / PrefixStreamIO.read(size)) — it must not
+        truncate the message before the real newline delimiter is found,
+        even when called with a hint far smaller than the payload.
+        """
+        newline_io = NewlineStreamIO(stream)
+
+        payload = b"y" * 500
+        stream.feed(payload + b"\n")
+
+        result = await newline_io.read(10)
+        assert result == payload
+
+
+class TestIPCServer:
+
+    @pytest.fixture
+    def stream(self):
+        return FakeStreamIO()
+
+    @pytest.fixture
+    def server(self):
+        return IPCServer()
+
+    @pytest.mark.anyio
+    async def test_oversized_message_does_not_corrupt_subsequent_message(self, stream, server):
+        """
+        Regression test for the production incident: IPCServer uses ONE
+        persistent NewlineStreamIO-wrapped connection for the life of a
+        worker process, and _handle_client reads messages in a `while True`
+        loop off that same connection. Before the fix, a message whose
+        framed length exceeded 4096 bytes was truncated mid-token by
+        NewlineStreamIO.read(), leaving its un-consumed tail (plus its real
+        trailing "\n") sitting in the stream. The next read() would then
+        pick up mid-stream from that leftover garbage, corrupting the
+        framing of every subsequent message on the connection, not just the
+        oversized one.
+
+        This proves both symptoms are fixed: the oversized first message is
+        dispatched with its real jsonrpc id preserved (not lost to a "Parse
+        error" / id: null response — the actual production symptom), and the
+        normal-sized second message on the *same* connection is unaffected
+        and also round-trips correctly.
+        """
+        server.eval(lambda response, answer, params: {"received": True})
+
+        large_payload = ujson.dumps({
+            "jsonrpc": "2.0",
+            "method": "eval",
+            "params": [{"padding": "x" * 6000}],
+            "id": 1,
+        })
+        normal_payload = ujson.dumps({
+            "jsonrpc": "2.0",
+            "method": "eval",
+            "params": [{}],
+            "id": 2,
+        })
+
+        assert len(large_payload) > 4096  # sanity: exercises the bug's size threshold
+
+        stream.feed(make_newline_message(large_payload))
+        stream.feed(make_newline_message(normal_payload))
+
+        await server._handle_client(stream)
+
+        assert len(stream.responses) == 2, (
+            f"Expected 2 responses but got {len(stream.responses)}. "
+            "The oversized first message likely corrupted framing for the "
+            "rest of the connection."
+        )
+
+        first_response = json.loads(stream.responses[0])
+        second_response = json.loads(stream.responses[1])
+
+        assert first_response.get("id") == 1, (
+            f"Expected response id=1 for the oversized message, got "
+            f"{first_response.get('id')!r}. A 'Parse error' response with "
+            "id=null indicates the message was truncated before dispatch — "
+            "this is the exact production bug (shimmy hangs waiting for an "
+            "id it never sees)."
+        )
+        assert second_response.get("id") == 2, (
+            f"Expected response id=2 for the normal-sized message that "
+            f"followed, got {second_response.get('id')!r}. This indicates "
+            "the connection's framing was corrupted by leftover bytes from "
+            "the truncated first message."
+        )
 
 
 class TestStdioServerSubprocess:
