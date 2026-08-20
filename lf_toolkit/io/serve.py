@@ -74,6 +74,8 @@ def create_rpc_server():
         return create_stdio_server()
     elif transport == "ipc":
         return create_ipc_server()
+    elif transport == "tcp":
+        return create_tcp_server()
     else:
         raise ValueError(f"Unsupported transport: {transport}")
 
@@ -89,3 +91,10 @@ def create_ipc_server():
 
     endpoint = os.environ.get("EVAL_RPC_IPC_ENDPOINT", None)
     return IPCServer(endpoint if endpoint else None)
+
+
+def create_tcp_server():
+    from .tcp_server import TCPServer
+
+    address = os.environ.get("EVAL_RPC_TCP_ADDRESS", None)
+    return TCPServer(address if address else None)

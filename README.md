@@ -43,21 +43,23 @@ run(server)
 
 ## Servers
 
-The toolkit provides three server types:
+The toolkit provides four server types:
 
 | Class | Transport | Use case |
 |---|---|---|
 | `StdioServer` | stdin/stdout | Default; subprocess communication |
 | `IPCServer` | Unix socket / named pipe | Local IPC |
+| `TCPServer` | TCP socket | Network IPC, e.g. for Shimmy |
 | `FileServer` | Files on disk | File-based request/response |
 
 ### Manual instantiation
 
 ```python
-from lf_toolkit import StdioServer, IPCServer, FileServer
+from lf_toolkit import StdioServer, IPCServer, TCPServer, FileServer
 
 server = StdioServer()
 server = IPCServer(endpoint="/tmp/eval.sock")
+server = TCPServer(address="127.0.0.1:7321")
 server = FileServer(request_file_path="request.json", response_file_path="response.json")
 ```
 
@@ -68,8 +70,9 @@ server = FileServer(request_file_path="request.json", response_file_path="respon
 | Variable | Values | Default |
 |---|---|---|
 | `EVAL_IO` | `rpc`, `file` | `rpc` |
-| `EVAL_RPC_TRANSPORT` | `stdio`, `ipc` | `stdio` |
+| `EVAL_RPC_TRANSPORT` | `stdio`, `ipc`, `tcp` | `stdio` |
 | `EVAL_RPC_IPC_ENDPOINT` | socket/pipe path | — |
+| `EVAL_RPC_TCP_ADDRESS` | `host:port` | `127.0.0.1:7321` |
 | `EVAL_FILE_NAME_REQUEST` | file path | — |
 | `EVAL_FILE_NAME_RESPONSE` | file path | — |
 
