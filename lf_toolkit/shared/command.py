@@ -1,4 +1,4 @@
 from typing import Literal
 
 
-Command = Literal["eval", "preview"]
+Command = Literal["eval", "preview", "chat", "chat/health"]

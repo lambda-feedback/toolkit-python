@@ -7,6 +7,9 @@ from typing import Dict
 
 import anyio
 
+from ..chat import ChatHealthResponse
+from ..chat import ChatRequest
+from ..chat import ChatResponse
 from ..evaluation import Result as EvaluationResult
 from ..evaluation.progress import flush_progress
 from ..shared import Command
@@ -15,7 +18,10 @@ from ..shared import Params
 
 class Handler(ABC):
 
-    _handlers: Dict[str, Callable] = {}
+    _handlers: Dict[str, Callable]
+
+    def __init__(self):
+        self._handlers = {}
 
     @abstractmethod
     async def dispatch(self, req: str) -> str:
@@ -70,11 +76,29 @@ class Handler(ABC):
         from .healthcheck import run_healthcheck
         return await anyio.to_thread.run_sync(run_healthcheck)
 
+    async def handle_chat(self, req: dict):
+        params = req["params"]
+        chat_request = ChatRequest.model_validate(params)
+
+        result = await self._call_user_handler("chat", chat_request)
+
+        if isinstance(result, ChatResponse):
+            return result.model_dump(mode="json", exclude_none=True)
+
+        return result
+
+    async def handle_chat_health(self, req: dict):
+        result = await self._call_user_handler("chat/health")
+
+        if isinstance(result, ChatHealthResponse):
+            return result.model_dump(mode="json", exclude_none=True)
+
+        return result
+
     async def handle(self, name: Command, req: dict) -> dict:
-        handler = getattr(self, f"handle_{name}", None)
+        handler = getattr(self, f"handle_{name.replace('/', '_')}", None)
 
         if handler is None:
             raise ValueError(f"No handler for '{name}'")
 
         return await handler(req)
-
