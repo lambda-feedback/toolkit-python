@@ -159,7 +159,7 @@ from lf_toolkit.chat import ChatRequest, ChatResponse, Message
 
 ## Image Upload
 
-Upload PIL images to S3 using AWS SigV4 authentication:
+Upload PIL images to AWS S3 or Google Cloud Storage:
 
 ```python
 from PIL import Image
@@ -169,7 +169,17 @@ img = Image.open("diagram.png")
 url = upload_image(img, folder_name="my-eval-function")
 ```
 
-Required environment variables:
+### Backend selection
+
+`upload_image` picks a backend at call time:
+
+1. `IMAGE_UPLOAD_BACKEND` env var, when set to `s3` or `gcs`, wins.
+2. Otherwise, if `GCS_BUCKET` is set the GCS backend is used.
+3. Otherwise S3 is used (the default — existing deployments are unaffected).
+
+### S3 backend
+
+Uses AWS SigV4-signed `PUT` requests.
 
 | Variable | Description |
 |---|---|
@@ -178,6 +188,19 @@ Required environment variables:
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key |
 | `AWS_SESSION_TOKEN` | (optional) Session token |
 | `AWS_REGION` | AWS region (default: `eu-west-2`) |
+
+### GCS backend
+
+Requires the `gcs` extra (`poetry install --extras gcs`, or
+`lf_toolkit = { ..., extras = ["gcs"] }`). Authenticates with Application
+Default Credentials (the runtime service account on Cloud Run / GKE / GCE) — no
+static keys. The target bucket / prefix must be readable by whoever consumes the
+returned URL (e.g. `roles/storage.objectViewer` for `allUsers`).
+
+| Variable | Description |
+|---|---|
+| `GCS_BUCKET` | Target bucket name |
+| `GCS_PUBLIC_BASE_URL` | (optional) URL host for the returned link (default: `https://storage.googleapis.com`) |
 
 ## Set Notation Parser
 

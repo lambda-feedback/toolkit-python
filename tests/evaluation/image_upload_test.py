@@ -8,11 +8,19 @@ import requests
 from lf_toolkit.evaluation.image_upload import (
     generate_file_name,
     get_s3_bucket_uri,
+    resolve_upload_backend,
     upload_image,
     ImageUploadError,
     InvalidMimeTypeError,
     MissingEnvironmentVariableError,
 )
+
+
+def fake_getenv(mapping):
+    """Build an os.getenv replacement backed by ``mapping`` (respects default)."""
+    def _getenv(key, default=None):
+        return mapping.get(key, default)
+    return _getenv
 
 
 class TestGenerateFileName:
@@ -94,8 +102,38 @@ class TestGetS3BucketUri:
                 get_s3_bucket_uri()
 
 
-class TestUploadImage:
-    """Test suite for upload_image function"""
+class TestResolveUploadBackend:
+    """Test suite for resolve_upload_backend function"""
+
+    @patch('lf_toolkit.evaluation.image_upload.os.getenv')
+    def test_defaults_to_s3(self, mock_getenv):
+        mock_getenv.side_effect = fake_getenv({})
+        assert resolve_upload_backend() == 's3'
+
+    @patch('lf_toolkit.evaluation.image_upload.os.getenv')
+    def test_gcs_bucket_selects_gcs(self, mock_getenv):
+        mock_getenv.side_effect = fake_getenv({'GCS_BUCKET': 'my-bucket'})
+        assert resolve_upload_backend() == 'gcs'
+
+    @patch('lf_toolkit.evaluation.image_upload.os.getenv')
+    def test_explicit_backend_wins_over_autodetect(self, mock_getenv):
+        mock_getenv.side_effect = fake_getenv({
+            'IMAGE_UPLOAD_BACKEND': 'S3',
+            'GCS_BUCKET': 'my-bucket',
+        })
+        assert resolve_upload_backend() == 's3'
+
+    @patch('lf_toolkit.evaluation.image_upload.os.getenv')
+    def test_unknown_backend_value_falls_back_to_autodetect(self, mock_getenv):
+        mock_getenv.side_effect = fake_getenv({
+            'IMAGE_UPLOAD_BACKEND': 'azure',
+            'S3_BUCKET_URI': 'https://s3.amazonaws.com/bucket',
+        })
+        assert resolve_upload_backend() == 's3'
+
+
+class TestUploadImageS3:
+    """Test suite for upload_image function (S3 backend)"""
 
     @patch('lf_toolkit.evaluation.image_upload.requests.request')
     @patch('lf_toolkit.evaluation.image_upload.get_aws_signed_request')
@@ -103,11 +141,9 @@ class TestUploadImage:
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
     def test_successful_upload(self, mock_uuid, mock_getenv, mock_get_aws_signed_request, mock_request):
         """Test successful image upload with UUID-based filename"""
-        # Setup mocks
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
-        mock_getenv.return_value = 'https://s3.amazonaws.com/eduvision'
+        mock_getenv.side_effect = fake_getenv({'S3_BUCKET_URI': 'https://s3.amazonaws.com/eduvision'})
 
-        # Mock the AWS signed request
         mock_prepared_request = Mock()
         mock_prepared_request.method = 'PUT'
         mock_prepared_request.url = 'https://s3.amazonaws.com/eduvision/eduvision/12345678-1234-5678-1234-567812345678.jpeg'
@@ -122,14 +158,11 @@ class TestUploadImage:
         mock_response.status_code = 200
         mock_request.return_value = mock_response
 
-        # Create a real PIL image for testing
         img = Image.new('RGB', (100, 100), color='red')
         img.format = 'JPEG'
 
-        # Execute
         result = upload_image(img, "eduvision")
 
-        # Verify response
         assert result == 'https://s3.amazonaws.com/eduvision/eduvision/12345678-1234-5678-1234-567812345678.jpeg'
         assert mock_request.called
         assert mock_request.call_args[1]['timeout'] == 30
@@ -140,11 +173,9 @@ class TestUploadImage:
     @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
     def test_upload_with_png(self, mock_uuid, mock_getenv, mock_get_aws_signed_request, mock_request):
         """Test uploading PNG image with UUID-based filename"""
-        # Setup mocks
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
-        mock_getenv.return_value = 'https://s3.amazonaws.com/eduvision'
+        mock_getenv.side_effect = fake_getenv({'S3_BUCKET_URI': 'https://s3.amazonaws.com/eduvision'})
 
-        # Mock the AWS signed request
         mock_prepared_request = Mock()
         mock_prepared_request.method = 'PUT'
         mock_prepared_request.url = 'https://s3.amazonaws.com/eduvision/eduvision/12345678-1234-5678-1234-567812345678.png'
@@ -169,7 +200,7 @@ class TestUploadImage:
     @patch('lf_toolkit.evaluation.image_upload.os.getenv')
     def test_upload_missing_s3_uri(self, mock_getenv):
         """Test upload fails when S3_BUCKET_URI is missing"""
-        mock_getenv.return_value = None
+        mock_getenv.side_effect = fake_getenv({})
 
         img = Image.new('RGB', (100, 100))
         img.format = 'JPEG'
@@ -184,9 +215,8 @@ class TestUploadImage:
     def test_upload_server_error(self, mock_uuid, mock_getenv, mock_get_aws_signed_request, mock_request):
         """Test upload fails when server returns error"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
-        mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
+        mock_getenv.side_effect = fake_getenv({'S3_BUCKET_URI': 'https://s3.amazonaws.com/bucket'})
 
-        # Mock the AWS signed request
         mock_prepared_request = Mock()
         mock_prepared_request.method = 'PUT'
         mock_prepared_request.url = 'https://s3.amazonaws.com/bucket/eduvision/12345678-1234-5678-1234-567812345678.jpeg'
@@ -217,9 +247,8 @@ class TestUploadImage:
     def test_upload_network_error(self, mock_uuid, mock_getenv, mock_get_aws_signed_request, mock_request):
         """Test upload fails on network error"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
-        mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
+        mock_getenv.side_effect = fake_getenv({'S3_BUCKET_URI': 'https://s3.amazonaws.com/bucket'})
 
-        # Mock the AWS signed request
         mock_prepared_request = Mock()
         mock_prepared_request.method = 'PUT'
         mock_prepared_request.url = 'https://s3.amazonaws.com/bucket/eduvision/12345678-1234-5678-1234-567812345678.jpeg'
@@ -247,9 +276,8 @@ class TestUploadImage:
     def test_upload_timeout_error(self, mock_uuid, mock_getenv, mock_get_aws_signed_request, mock_request):
         """Test upload fails on timeout"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
-        mock_getenv.return_value = 'https://s3.amazonaws.com/bucket'
+        mock_getenv.side_effect = fake_getenv({'S3_BUCKET_URI': 'https://s3.amazonaws.com/bucket'})
 
-        # Mock the AWS signed request
         mock_prepared_request = Mock()
         mock_prepared_request.method = 'PUT'
         mock_prepared_request.url = 'https://s3.amazonaws.com/bucket/eduvision/12345678-1234-5678-1234-567812345678.jpeg'
@@ -277,9 +305,8 @@ class TestUploadImage:
     def test_upload_image_no_format(self, mock_uuid, mock_getenv, mock_get_aws_signed_request, mock_request):
         """Test upload with image that has no format (defaults to PNG) uses UUID filename"""
         mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
-        mock_getenv.return_value = 'https://s3.amazonaws.com/bucket/'
+        mock_getenv.side_effect = fake_getenv({'S3_BUCKET_URI': 'https://s3.amazonaws.com/bucket/'})
 
-        # Mock the AWS signed request
         mock_prepared_request = Mock()
         mock_prepared_request.method = 'PUT'
         mock_prepared_request.url = 'https://s3.amazonaws.com/bucket/eduvision/12345678-1234-5678-1234-567812345678.png'
@@ -300,6 +327,111 @@ class TestUploadImage:
         result = upload_image(img, "eduvision")
 
         assert result == 'https://s3.amazonaws.com/bucket/eduvision/12345678-1234-5678-1234-567812345678.png'
+
+
+class TestUploadImageGCS:
+    """Test suite for upload_image function (GCS backend)"""
+
+    def _mock_storage(self):
+        mock_blob = Mock()
+        mock_bucket = Mock()
+        mock_bucket.blob.return_value = mock_blob
+        mock_client = Mock()
+        mock_client.bucket.return_value = mock_bucket
+        mock_storage = Mock()
+        mock_storage.Client.return_value = mock_client
+        return mock_storage, mock_client, mock_bucket, mock_blob
+
+    @patch('lf_toolkit.evaluation.image_upload.os.getenv')
+    @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
+    def test_successful_gcs_upload(self, mock_uuid, mock_getenv):
+        mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
+        mock_getenv.side_effect = fake_getenv({'GCS_BUCKET': 'plots-bucket'})
+        mock_storage, mock_client, mock_bucket, mock_blob = self._mock_storage()
+
+        img = Image.new('RGB', (100, 100), color='blue')
+        img.format = 'PNG'
+
+        with patch('lf_toolkit.evaluation.image_upload._gcs_storage', mock_storage):
+            result = upload_image(img, "evaluatePython")
+
+        assert result == (
+            'https://storage.googleapis.com/plots-bucket/evaluatePython/'
+            '12345678-1234-5678-1234-567812345678.png'
+        )
+        mock_client.bucket.assert_called_once_with('plots-bucket')
+        mock_bucket.blob.assert_called_once_with(
+            'evaluatePython/12345678-1234-5678-1234-567812345678.png'
+        )
+        _, kwargs = mock_blob.upload_from_string.call_args
+        assert kwargs['content_type'] == 'image/png'
+
+    @patch('lf_toolkit.evaluation.image_upload.os.getenv')
+    @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
+    def test_gcs_public_base_url_override(self, mock_uuid, mock_getenv):
+        mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
+        mock_getenv.side_effect = fake_getenv({
+            'IMAGE_UPLOAD_BACKEND': 'gcs',
+            'GCS_BUCKET': 'plots-bucket',
+            'GCS_PUBLIC_BASE_URL': 'https://cdn.example.com/',
+        })
+        mock_storage, *_ = self._mock_storage()
+
+        img = Image.new('RGB', (10, 10))
+        img.format = 'PNG'
+
+        with patch('lf_toolkit.evaluation.image_upload._gcs_storage', mock_storage):
+            result = upload_image(img, "evaluatePython")
+
+        assert result == (
+            'https://cdn.example.com/plots-bucket/evaluatePython/'
+            '12345678-1234-5678-1234-567812345678.png'
+        )
+
+    @patch('lf_toolkit.evaluation.image_upload.os.getenv')
+    def test_gcs_missing_bucket(self, mock_getenv):
+        mock_getenv.side_effect = fake_getenv({'IMAGE_UPLOAD_BACKEND': 'gcs'})
+        mock_storage, *_ = self._mock_storage()
+
+        img = Image.new('RGB', (10, 10))
+        img.format = 'PNG'
+
+        with patch('lf_toolkit.evaluation.image_upload._gcs_storage', mock_storage):
+            with pytest.raises(MissingEnvironmentVariableError):
+                upload_image(img, "evaluatePython")
+
+    @patch('lf_toolkit.evaluation.image_upload.os.getenv')
+    def test_gcs_backend_without_dependency(self, mock_getenv):
+        mock_getenv.side_effect = fake_getenv({
+            'IMAGE_UPLOAD_BACKEND': 'gcs',
+            'GCS_BUCKET': 'plots-bucket',
+        })
+
+        img = Image.new('RGB', (10, 10))
+        img.format = 'PNG'
+
+        with patch('lf_toolkit.evaluation.image_upload._gcs_storage', None):
+            with pytest.raises(ImageUploadError) as exc_info:
+                upload_image(img, "evaluatePython")
+
+        assert "google-cloud-storage is not installed" in str(exc_info.value)
+
+    @patch('lf_toolkit.evaluation.image_upload.os.getenv')
+    @patch('lf_toolkit.evaluation.image_upload.uuid.uuid4')
+    def test_gcs_upload_error_wrapped(self, mock_uuid, mock_getenv):
+        mock_uuid.return_value = uuid.UUID('12345678-1234-5678-1234-567812345678')
+        mock_getenv.side_effect = fake_getenv({'GCS_BUCKET': 'plots-bucket'})
+        mock_storage, _, _, mock_blob = self._mock_storage()
+        mock_blob.upload_from_string.side_effect = RuntimeError('boom')
+
+        img = Image.new('RGB', (10, 10))
+        img.format = 'PNG'
+
+        with patch('lf_toolkit.evaluation.image_upload._gcs_storage', mock_storage):
+            with pytest.raises(ImageUploadError) as exc_info:
+                upload_image(img, "evaluatePython")
+
+        assert "boom" in str(exc_info.value)
 
 
 class TestExceptionHierarchy:
