@@ -32,6 +32,9 @@ def jsonrpc_handler(handler: Handler, name: Command):
             result = await handler.handle(name, {"params": req})
             return Success(result)
         except Exception as e:
-            return Error(0, str(e), e)
+            # Pass only the message: the exception object is not JSON
+            # serializable, so sending it as `data` makes serializing the
+            # error response raise, which tears down the serve loop.
+            return Error(0, str(e))
 
     return wrapped
