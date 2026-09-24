@@ -1,3 +1,6 @@
+import sys
+import traceback
+
 from abc import ABC
 from abc import abstractmethod
 
@@ -82,29 +85,52 @@ class StreamServer(BaseServer):
     async def _handle_client(self, client: StreamIO):
         io = self.wrap_io(client)
 
-        while True:
-            try:
-                import sys
-                print("waiting for data...", file=sys.stderr, flush=True)
-                data = await io.read(4096)
-                print(f"got data: {data[:80]}", file=sys.stderr, flush=True)
-
-                if not data:
-                    break
-
-                print("dispatching...", file=sys.stderr, flush=True)
-                response = await self.dispatch(data.decode("utf-8"))
-                print(f"got response: {str(response)[:80]}", file=sys.stderr, flush=True)
-
-                await io.write(response.encode("utf-8"))
-                print("wrote response", file=sys.stderr, flush=True)
-            except anyio.EndOfStream:
-                break
-            except anyio.ClosedResourceError:
-                break
-            except Exception as e:
-                import traceback
-                traceback.print_exc(file=sys.stderr)
-                break
+        serving = True
+        while serving:
+            serving = await self._serve_once(io)
 
         await client.close()
+
+    async def _serve_once(self, io: StreamIO) -> bool:
+        """Read one request, dispatch it and write the response.
+
+        Returns True when the session can carry on, and False once the
+        stream has ended or is no longer safe to read from.
+        """
+        try:
+            print("waiting for data...", file=sys.stderr, flush=True)
+            data = await io.read(4096)
+            print(f"got data: {data[:80]}", file=sys.stderr, flush=True)
+        except (anyio.EndOfStream, anyio.ClosedResourceError):
+            return False
+        except Exception:
+            # A read failure may have consumed part of a frame, so there is
+            # no point in the stream we can safely resume from.
+            traceback.print_exc(file=sys.stderr)
+            return False
+
+        if not data:
+            return False
+
+        try:
+            print("dispatching...", file=sys.stderr, flush=True)
+            response = await self.dispatch(data.decode("utf-8"))
+            print(f"got response: {str(response)[:80]}", file=sys.stderr, flush=True)
+        except Exception:
+            # One bad request must not end the session: the frame was read in
+            # full, so the stream is still aligned and the next request can be
+            # served. The caller gets no reply for this one and will time out,
+            # which beats every later request on this worker timing out too.
+            traceback.print_exc(file=sys.stderr)
+            return True
+
+        try:
+            await io.write(response.encode("utf-8"))
+            print("wrote response", file=sys.stderr, flush=True)
+        except (anyio.EndOfStream, anyio.ClosedResourceError):
+            return False
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
+            return False
+
+        return True
