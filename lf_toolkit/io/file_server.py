@@ -6,6 +6,7 @@ from anyio import open_file
 
 from .base_server import BaseServer
 from .handler import Handler
+from .handler import InvalidSubmissionError
 
 
 class FileHandler(Handler):
@@ -16,8 +17,13 @@ class FileHandler(Handler):
         try:
             result = await self.handle(command, request)
             response = {"command": command, "result": result}
+        except InvalidSubmissionError as e:
+            response = {
+                "command": command,
+                "error": {"message": str(e), "code": "INVALID_SUBMISSION"},
+            }
         except Exception as e:
-            response = {"command": command, "error": str(e)}
+            response = {"command": command, "error": {"message": str(e)}}
         return ujson.dumps(response)
 
 
