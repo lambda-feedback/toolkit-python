@@ -81,7 +81,7 @@ class TestFileHandler:
 
         assert response["command"] == "bad_command"
         assert "error" in response
-        assert response["error"] == "Invalid command"
+        assert response["error"] == {"message": "Invalid command"}
         assert "result" not in response
 
     @pytest.mark.asyncio
@@ -195,7 +195,7 @@ class TestFileServer:
 
         assert response["command"] == "failing_command"
         assert "error" in response
-        assert response["error"] == "Processing failed"
+        assert response["error"] == {"message": "Processing failed"}
 
     @pytest.mark.asyncio
     async def test_run_missing_request_file(self, temp_files):
@@ -273,3 +273,37 @@ class TestFileServer:
 
         assert response["command"] == "eval"
         assert response["result"] == {"processed": True}
+
+
+class TestFileHandlerUserErrors:
+    """Tests for errors raised by registered user handlers"""
+
+    @pytest.mark.asyncio
+    async def test_value_error_returns_invalid_submission(self):
+        def preview_fn(response, params):
+            raise ValueError(f"Failed to parse SymPy expression: {response}")
+
+        handler = FileHandler()
+        handler.register("preview", preview_fn)
+
+        request = ujson.dumps({"command": "preview", "params": {"response": "A/(w*"}})
+        response = ujson.loads(await handler.dispatch(request))
+
+        assert response["error"] == {
+            "message": "Failed to parse SymPy expression: A/(w*",
+            "code": "INVALID_SUBMISSION",
+        }
+
+    @pytest.mark.asyncio
+    async def test_unexpected_error_has_no_code(self):
+        def preview_fn(response, params):
+            raise RuntimeError("boom")
+
+        handler = FileHandler()
+        handler.register("preview", preview_fn)
+
+        request = ujson.dumps({"command": "preview", "params": {"response": "x"}})
+        response = ujson.loads(await handler.dispatch(request))
+
+        assert "code" not in response["error"]
+        assert "boom" in response["error"]["message"]

@@ -69,3 +69,43 @@ class TestJsonRpcHandlerChat:
 
         assert response["result"]["status"] == "OK"
         assert response["result"]["capabilities"]["supportsChat"] is True
+
+
+class TestJsonRpcHandlerErrors:
+
+    @pytest.fixture
+    def handler(self):
+        return JsonRpcHandler()
+
+    @staticmethod
+    def _eval_request(response):
+        return ujson.dumps({
+            "jsonrpc": "2.0",
+            "method": "eval",
+            "params": [{"response": response, "answer": "x", "params": {}}],
+            "id": 1,
+        })
+
+    @pytest.mark.asyncio
+    async def test_value_error_returns_invalid_submission_code(self, handler):
+        def eval_fn(response, answer, params):
+            raise ValueError(f"Failed to parse SymPy expression: {response}")
+
+        handler.register("eval", eval_fn)
+
+        response = ujson.loads(await handler.dispatch(self._eval_request("A/(w*")))
+
+        assert response["error"]["code"] == 422
+        assert response["error"]["message"] == "Failed to parse SymPy expression: A/(w*"
+
+    @pytest.mark.asyncio
+    async def test_unexpected_error_returns_generic_code(self, handler):
+        def eval_fn(response, answer, params):
+            raise RuntimeError("boom")
+
+        handler.register("eval", eval_fn)
+
+        response = ujson.loads(await handler.dispatch(self._eval_request("x+1")))
+
+        assert response["error"]["code"] == 0
+        assert "boom" in response["error"]["message"]

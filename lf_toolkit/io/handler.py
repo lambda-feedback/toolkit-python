@@ -14,6 +14,13 @@ from ..evaluation import Result as EvaluationResult
 from ..shared import Command
 from ..shared import Params
 
+# JSON-RPC error code for submissions the user handler cannot process.
+INVALID_SUBMISSION_CODE = 422
+
+
+class InvalidSubmissionError(Exception):
+    """Raised when the user handler cannot process the submitted response."""
+
 
 class Handler(ABC):
 
@@ -40,6 +47,8 @@ class Handler(ABC):
                 return await handler(*args, **kwargs)
             else:
                 return await anyio.to_thread.run_sync(handler, *args, **kwargs)
+        except ValueError as e:
+            raise InvalidSubmissionError(str(e)) from e
         except Exception as e:
             raise ValueError(f"Error calling user handler for '{req}': {e}")
 
