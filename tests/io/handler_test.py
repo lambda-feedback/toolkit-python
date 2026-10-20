@@ -5,6 +5,10 @@ from lf_toolkit.chat import ChatHealthResponse
 from lf_toolkit.chat import ChatRequest
 from lf_toolkit.chat import ChatResponse
 from lf_toolkit.chat import Message
+from lf_toolkit import EvaluationFunctionError
+from lf_toolkit import InvalidSubmissionError
+from lf_toolkit import UpstreamTimeoutError
+from lf_toolkit import UpstreamUnavailableError
 from lf_toolkit.io.file_server import FileHandler
 from lf_toolkit.shared.mued_api_v0_1_0 import DataPolicySupport
 from lf_toolkit.shared.mued_api_v0_1_0 import HealthStatus
@@ -88,6 +92,48 @@ class TestHandleChatHealth:
         result = await handler.handle_chat_health({"params": {}})
 
         assert result == {"status": "OK"}
+
+
+class TestCallUserHandlerErrors:
+
+    @pytest.fixture
+    def handler(self):
+        return FileHandler()
+
+    @pytest.mark.parametrize("error_class", [
+        EvaluationFunctionError,
+        InvalidSubmissionError,
+        UpstreamTimeoutError,
+        UpstreamUnavailableError,
+    ])
+    @pytest.mark.asyncio
+    async def test_evaluation_function_error_is_not_rewrapped(self, handler, error_class):
+        raised = error_class("upstream failed")
+
+        def eval_fn(response, answer, params):
+            raise raised
+
+        handler.register("eval", eval_fn)
+
+        with pytest.raises(error_class) as exc_info:
+            await handler.handle_eval({"params": {"response": "x"}})
+
+        assert exc_info.value is raised
+
+    @pytest.mark.asyncio
+    async def test_value_error_becomes_invalid_submission(self, handler):
+        def eval_fn(response, answer, params):
+            raise ValueError("bad input")
+
+        handler.register("eval", eval_fn)
+
+        with pytest.raises(InvalidSubmissionError, match="^bad input$"):
+            await handler.handle_eval({"params": {"response": "x"}})
+
+    def test_upstream_errors_are_not_value_errors(self):
+        # Otherwise `except ValueError` in user code would swallow them.
+        assert not issubclass(UpstreamTimeoutError, ValueError)
+        assert not issubclass(UpstreamUnavailableError, ValueError)
 
 
 class TestHandleDispatch:

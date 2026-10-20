@@ -6,7 +6,7 @@ from anyio import open_file
 
 from .base_server import BaseServer
 from .handler import Handler
-from .handler import InvalidSubmissionError
+from .handler import EvaluationFunctionError
 
 
 class FileHandler(Handler):
@@ -17,10 +17,10 @@ class FileHandler(Handler):
         try:
             result = await self.handle(command, request)
             response = {"command": command, "result": result}
-        except InvalidSubmissionError as e:
+        except EvaluationFunctionError as e:
             response = {
                 "command": command,
-                "error": {"message": str(e), "code": "INVALID_SUBMISSION"},
+                "error": {"message": str(e), "code": e.file_code},
             }
         except Exception as e:
             response = {"command": command, "error": {"message": str(e)}}

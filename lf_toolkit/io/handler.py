@@ -18,8 +18,36 @@ from ..shared import Params
 INVALID_SUBMISSION_CODE = 422
 
 
-class InvalidSubmissionError(Exception):
+class EvaluationFunctionError(Exception):
+    """An error the evaluation function chose to report.
+
+    The message is passed to the caller verbatim, and the class decides the
+    JSON-RPC code (stdio/IPC) and the error code (file IO) it is reported with.
+    """
+
+    rpc_code = 500
+    file_code = "INTERNAL_ERROR"
+
+
+class InvalidSubmissionError(EvaluationFunctionError):
     """Raised when the user handler cannot process the submitted response."""
+
+    rpc_code = INVALID_SUBMISSION_CODE
+    file_code = "INVALID_SUBMISSION"
+
+
+class UpstreamTimeoutError(EvaluationFunctionError):
+    """A service the evaluation function depends on did not answer in time."""
+
+    rpc_code = 504
+    file_code = "UPSTREAM_TIMEOUT"
+
+
+class UpstreamUnavailableError(EvaluationFunctionError):
+    """A service the evaluation function depends on refused or failed."""
+
+    rpc_code = 503
+    file_code = "UPSTREAM_UNAVAILABLE"
 
 
 class Handler(ABC):
@@ -47,6 +75,8 @@ class Handler(ABC):
                 return await handler(*args, **kwargs)
             else:
                 return await anyio.to_thread.run_sync(handler, *args, **kwargs)
+        except EvaluationFunctionError:
+            raise
         except ValueError as e:
             raise InvalidSubmissionError(str(e)) from e
         except Exception as e:

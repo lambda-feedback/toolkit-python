@@ -6,6 +6,10 @@ from lf_toolkit.chat import ChatHealthResponse
 from lf_toolkit.chat import ChatRequest
 from lf_toolkit.chat import ChatResponse
 from lf_toolkit.chat import Message
+from lf_toolkit import EvaluationFunctionError
+from lf_toolkit import InvalidSubmissionError
+from lf_toolkit import UpstreamTimeoutError
+from lf_toolkit import UpstreamUnavailableError
 from lf_toolkit.io.rpc_handler import JsonRpcHandler
 from lf_toolkit.shared.mued_api_v0_1_0 import DataPolicySupport
 from lf_toolkit.shared.mued_api_v0_1_0 import HealthStatus
@@ -108,4 +112,44 @@ class TestJsonRpcHandlerErrors:
         response = ujson.loads(await handler.dispatch(self._eval_request("x+1")))
 
         assert response["error"]["code"] == 0
-        assert "boom" in response["error"]["message"]
+        assert response["error"]["message"] == "Error calling user handler for 'eval': boom"
+
+    @pytest.mark.parametrize("error_class, code", [
+        (EvaluationFunctionError, 500),
+        (InvalidSubmissionError, 422),
+        (UpstreamTimeoutError, 504),
+        (UpstreamUnavailableError, 503),
+    ])
+    @pytest.mark.asyncio
+    async def test_evaluation_function_error_returns_its_own_code(self, handler, error_class, code):
+        def eval_fn(response, answer, params):
+            raise error_class("OpenRouter did not answer in time")
+
+        handler.register("eval", eval_fn)
+
+        response = ujson.loads(await handler.dispatch(self._eval_request("x+1")))
+
+        assert response["id"] == 1
+        assert response["error"]["code"] == code
+        assert response["error"]["message"] == "OpenRouter did not answer in time"
+        assert "data" not in response["error"]
+
+    @pytest.mark.asyncio
+    async def test_error_response_serialises_after_an_error(self, handler):
+        """Regression for v1.1.2: building the error response must not raise,
+        and the handler must keep serving the next request."""
+        calls = []
+
+        def eval_fn(response, answer, params):
+            calls.append(response)
+            if len(calls) == 1:
+                raise UpstreamTimeoutError("timed out")
+            return {"is_correct": True}
+
+        handler.register("eval", eval_fn)
+
+        first = ujson.loads(await handler.dispatch(self._eval_request("x+1")))
+        second = ujson.loads(await handler.dispatch(self._eval_request("x+2")))
+
+        assert first["error"]["code"] == 504
+        assert second["result"] == {"is_correct": True}
