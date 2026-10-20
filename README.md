@@ -99,6 +99,35 @@ async def evaluate(response, answer, params: Params) -> Result:
     ...
 ```
 
+## Reporting Errors
+
+Raise one of these from a handler to report an error with its own code. The message is passed to the caller verbatim, without the "Error calling user handler" prefix.
+
+| Raise | JSON-RPC code (stdio/IPC) | File IO `error.code` | Use when |
+|---|---|---|---|
+| `InvalidSubmissionError` | 422 | `INVALID_SUBMISSION` | the submitted response can't be processed |
+| `UpstreamTimeoutError` | 424 | `UPSTREAM_TIMEOUT` | a service the function depends on did not answer in time (retryable) |
+| `UpstreamUnavailableError` | 424 | `UPSTREAM_UNAVAILABLE` | a service the function depends on refused or failed (retryable) |
+| `EvaluationFunctionError` | 500 | `INTERNAL_ERROR` | any other error the function chooses to report |
+
+Upstream failures use 424 (Failed Dependency) rather than 5xx, because the evaluation function itself is working; 5xx is kept for errors in the function. Over JSON-RPC the File IO code is also sent as the error's `data` (`{"code": "UPSTREAM_TIMEOUT"}`), which tells the two 424s apart.
+
+```python
+from lf_toolkit import UpstreamTimeoutError
+
+@server.eval
+def evaluate(response, answer, params: Params) -> Result:
+    try:
+        feedback = call_model(response, timeout=20)
+    except TimeoutError as e:
+        raise UpstreamTimeoutError("The feedback service did not answer in time") from e
+    ...
+```
+
+Any other `ValueError` is reported as `InvalidSubmissionError` (422). Any other exception is reported with code `0` (and no file IO `code`), with its message prefixed by "Error calling user handler for '<command>'".
+
+The message reaches the caller, so keep secrets out of it. The toolkit does not log requests, responses or error messages, since they can contain student submissions.
+
 ## Result Types
 
 ### `evaluation.Result`

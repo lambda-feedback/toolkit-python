@@ -5,9 +5,8 @@ from jsonrpcserver import Success
 from jsonrpcserver import async_dispatch
 
 from ..shared import Command
-from .handler import INVALID_SUBMISSION_CODE
+from .handler import EvaluationFunctionError
 from .handler import Handler
-from .handler import InvalidSubmissionError
 
 
 class JsonRpcHandler(Handler):
@@ -33,12 +32,12 @@ def jsonrpc_handler(handler: Handler, name: Command):
         try:
             result = await handler.handle(name, {"params": req})
             return Success(result)
-        except InvalidSubmissionError as e:
-            return Error(INVALID_SUBMISSION_CODE, str(e))
+        # Pass only strings: the exception object is not JSON
+        # serializable, so sending it as `data` makes serializing the
+        # error response raise, which tears down the serve loop.
+        except EvaluationFunctionError as e:
+            return Error(e.rpc_code, str(e), {"code": e.file_code})
         except Exception as e:
-            # Pass only the message: the exception object is not JSON
-            # serializable, so sending it as `data` makes serializing the
-            # error response raise, which tears down the serve loop.
             return Error(0, str(e))
 
     return wrapped

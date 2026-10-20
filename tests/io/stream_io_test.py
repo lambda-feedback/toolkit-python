@@ -354,6 +354,65 @@ class TestIPCServer:
         )
 
 
+class TestNoStudentInputLogged:
+    """Requests carry student submissions, which must never reach the logs."""
+
+    SUBMISSION = "student-submission-7f3a"
+
+    @pytest.fixture
+    def stream(self):
+        return FakeStreamIO()
+
+    @pytest.fixture
+    def server(self):
+        return IPCServer()
+
+    def _feed_eval(self, stream):
+        stream.feed(make_newline_message(ujson.dumps({
+            "jsonrpc": "2.0",
+            "method": "eval",
+            "params": [{"response": self.SUBMISSION, "answer": "x", "params": {}}],
+            "id": 1,
+        })))
+
+    @pytest.mark.anyio
+    async def test_successful_request(self, stream, server, capsys):
+        server.eval(lambda response, answer, params: {"response_latex": response})
+        self._feed_eval(stream)
+
+        await server._handle_client(stream)
+
+        assert self.SUBMISSION.encode() in stream.responses[0]
+        assert self.SUBMISSION not in capsys.readouterr().err
+
+    @pytest.mark.anyio
+    async def test_handler_error_quoting_the_submission(self, stream, server, capsys):
+        def eval_fn(response, answer, params):
+            raise RuntimeError(f"could not parse {response}")
+
+        server.eval(eval_fn)
+        self._feed_eval(stream)
+
+        await server._handle_client(stream)
+
+        assert self.SUBMISSION.encode() in stream.responses[0]
+        assert self.SUBMISSION not in capsys.readouterr().err
+
+    @pytest.mark.anyio
+    async def test_dispatch_error_quoting_the_submission(self, stream, server, capsys, monkeypatch):
+        async def failing_dispatch(req):
+            raise RuntimeError(f"failed on {req}")
+
+        monkeypatch.setattr(server, "dispatch", failing_dispatch)
+        self._feed_eval(stream)
+
+        await server._handle_client(stream)
+
+        err = capsys.readouterr().err
+        assert "RuntimeError" in err
+        assert self.SUBMISSION not in err
+
+
 class TestStdioServerSubprocess:
 
     def test_binary_pipe_roundtrip(self):

@@ -4,6 +4,10 @@ from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from typing import Any
 
+from lf_toolkit import EvaluationFunctionError
+from lf_toolkit import InvalidSubmissionError
+from lf_toolkit import UpstreamTimeoutError
+from lf_toolkit import UpstreamUnavailableError
 from lf_toolkit.io.file_server import FileHandler, FileServer
 from lf_toolkit.io.handler import Handler
 
@@ -307,3 +311,22 @@ class TestFileHandlerUserErrors:
 
         assert "code" not in response["error"]
         assert "boom" in response["error"]["message"]
+
+    @pytest.mark.parametrize("error_class, code", [
+        (EvaluationFunctionError, "INTERNAL_ERROR"),
+        (InvalidSubmissionError, "INVALID_SUBMISSION"),
+        (UpstreamTimeoutError, "UPSTREAM_TIMEOUT"),
+        (UpstreamUnavailableError, "UPSTREAM_UNAVAILABLE"),
+    ])
+    @pytest.mark.asyncio
+    async def test_evaluation_function_error_returns_its_file_code(self, error_class, code):
+        def eval_fn(response, answer, params):
+            raise error_class("OpenRouter is unavailable")
+
+        handler = FileHandler()
+        handler.register("eval", eval_fn)
+
+        request = ujson.dumps({"command": "eval", "params": {"response": "x"}})
+        response = ujson.loads(await handler.dispatch(request))
+
+        assert response["error"] == {"message": "OpenRouter is unavailable", "code": code}

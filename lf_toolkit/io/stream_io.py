@@ -9,6 +9,13 @@ import anyio
 from .base_server import BaseServer
 
 
+def _print_exception(e: BaseException):
+    # Requests carry student submissions, and exception messages often quote
+    # them, so log only the exception type and where it was raised.
+    print(f"{type(e).__name__} raised:", file=sys.stderr, flush=True)
+    traceback.print_tb(e.__traceback__, file=sys.stderr)
+
+
 class StreamIO(ABC):
 
     @abstractmethod
@@ -100,13 +107,13 @@ class StreamServer(BaseServer):
         try:
             print("waiting for data...", file=sys.stderr, flush=True)
             data = await io.read(4096)
-            print(f"got data: {data[:80]}", file=sys.stderr, flush=True)
+            print(f"got data ({len(data)} bytes)", file=sys.stderr, flush=True)
         except (anyio.EndOfStream, anyio.ClosedResourceError):
             return False
-        except Exception:
+        except Exception as e:
             # A read failure may have consumed part of a frame, so there is
             # no point in the stream we can safely resume from.
-            traceback.print_exc(file=sys.stderr)
+            _print_exception(e)
             return False
 
         if not data:
@@ -115,13 +122,13 @@ class StreamServer(BaseServer):
         try:
             print("dispatching...", file=sys.stderr, flush=True)
             response = await self.dispatch(data.decode("utf-8"))
-            print(f"got response: {str(response)[:80]}", file=sys.stderr, flush=True)
-        except Exception:
+            print(f"got response ({len(response)} chars)", file=sys.stderr, flush=True)
+        except Exception as e:
             # One bad request must not end the session: the frame was read in
             # full, so the stream is still aligned and the next request can be
             # served. The caller gets no reply for this one and will time out,
             # which beats every later request on this worker timing out too.
-            traceback.print_exc(file=sys.stderr)
+            _print_exception(e)
             return True
 
         try:
@@ -129,8 +136,8 @@ class StreamServer(BaseServer):
             print("wrote response", file=sys.stderr, flush=True)
         except (anyio.EndOfStream, anyio.ClosedResourceError):
             return False
-        except Exception:
-            traceback.print_exc(file=sys.stderr)
+        except Exception as e:
+            _print_exception(e)
             return False
 
         return True

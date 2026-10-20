@@ -17,9 +17,44 @@ from ..shared import Params
 # JSON-RPC error code for submissions the user handler cannot process.
 INVALID_SUBMISSION_CODE = 422
 
+# JSON-RPC error code for failures of a service the user handler depends on.
+# These are not failures of the evaluation function itself, so they are
+# reported as 424 (Failed Dependency) rather than 5xx, matching shimmy.
+UPSTREAM_ERROR_CODE = 424
 
-class InvalidSubmissionError(Exception):
+
+class EvaluationFunctionError(Exception):
+    """An error the evaluation function chose to report.
+
+    The message is passed to the caller verbatim, and the class decides the
+    JSON-RPC code (stdio/IPC) and the error code (file IO) it is reported with.
+    Over JSON-RPC the error code is also sent as the error's `data`, since
+    several classes share a JSON-RPC code.
+    """
+
+    rpc_code = 500
+    file_code = "INTERNAL_ERROR"
+
+
+class InvalidSubmissionError(EvaluationFunctionError):
     """Raised when the user handler cannot process the submitted response."""
+
+    rpc_code = INVALID_SUBMISSION_CODE
+    file_code = "INVALID_SUBMISSION"
+
+
+class UpstreamTimeoutError(EvaluationFunctionError):
+    """A service the evaluation function depends on did not answer in time."""
+
+    rpc_code = UPSTREAM_ERROR_CODE
+    file_code = "UPSTREAM_TIMEOUT"
+
+
+class UpstreamUnavailableError(EvaluationFunctionError):
+    """A service the evaluation function depends on refused or failed."""
+
+    rpc_code = UPSTREAM_ERROR_CODE
+    file_code = "UPSTREAM_UNAVAILABLE"
 
 
 class Handler(ABC):
@@ -47,6 +82,8 @@ class Handler(ABC):
                 return await handler(*args, **kwargs)
             else:
                 return await anyio.to_thread.run_sync(handler, *args, **kwargs)
+        except EvaluationFunctionError:
+            raise
         except ValueError as e:
             raise InvalidSubmissionError(str(e)) from e
         except Exception as e:
