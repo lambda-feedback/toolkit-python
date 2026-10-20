@@ -17,12 +17,19 @@ from ..shared import Params
 # JSON-RPC error code for submissions the user handler cannot process.
 INVALID_SUBMISSION_CODE = 422
 
+# JSON-RPC error code for failures of a service the user handler depends on.
+# These are not failures of the evaluation function itself, so they are
+# reported as 424 (Failed Dependency) rather than 5xx, matching shimmy.
+UPSTREAM_ERROR_CODE = 424
+
 
 class EvaluationFunctionError(Exception):
     """An error the evaluation function chose to report.
 
     The message is passed to the caller verbatim, and the class decides the
     JSON-RPC code (stdio/IPC) and the error code (file IO) it is reported with.
+    Over JSON-RPC the error code is also sent as the error's `data`, since
+    several classes share a JSON-RPC code.
     """
 
     rpc_code = 500
@@ -39,14 +46,14 @@ class InvalidSubmissionError(EvaluationFunctionError):
 class UpstreamTimeoutError(EvaluationFunctionError):
     """A service the evaluation function depends on did not answer in time."""
 
-    rpc_code = 504
+    rpc_code = UPSTREAM_ERROR_CODE
     file_code = "UPSTREAM_TIMEOUT"
 
 
 class UpstreamUnavailableError(EvaluationFunctionError):
     """A service the evaluation function depends on refused or failed."""
 
-    rpc_code = 503
+    rpc_code = UPSTREAM_ERROR_CODE
     file_code = "UPSTREAM_UNAVAILABLE"
 
 

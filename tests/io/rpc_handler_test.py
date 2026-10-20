@@ -114,14 +114,14 @@ class TestJsonRpcHandlerErrors:
         assert response["error"]["code"] == 0
         assert response["error"]["message"] == "Error calling user handler for 'eval': boom"
 
-    @pytest.mark.parametrize("error_class, code", [
-        (EvaluationFunctionError, 500),
-        (InvalidSubmissionError, 422),
-        (UpstreamTimeoutError, 504),
-        (UpstreamUnavailableError, 503),
+    @pytest.mark.parametrize("error_class, code, file_code", [
+        (EvaluationFunctionError, 500, "INTERNAL_ERROR"),
+        (InvalidSubmissionError, 422, "INVALID_SUBMISSION"),
+        (UpstreamTimeoutError, 424, "UPSTREAM_TIMEOUT"),
+        (UpstreamUnavailableError, 424, "UPSTREAM_UNAVAILABLE"),
     ])
     @pytest.mark.asyncio
-    async def test_evaluation_function_error_returns_its_own_code(self, handler, error_class, code):
+    async def test_evaluation_function_error_returns_its_own_code(self, handler, error_class, code, file_code):
         def eval_fn(response, answer, params):
             raise error_class("OpenRouter did not answer in time")
 
@@ -130,9 +130,11 @@ class TestJsonRpcHandlerErrors:
         response = ujson.loads(await handler.dispatch(self._eval_request("x+1")))
 
         assert response["id"] == 1
-        assert response["error"]["code"] == code
-        assert response["error"]["message"] == "OpenRouter did not answer in time"
-        assert "data" not in response["error"]
+        assert response["error"] == {
+            "code": code,
+            "message": "OpenRouter did not answer in time",
+            "data": {"code": file_code},
+        }
 
     @pytest.mark.asyncio
     async def test_error_response_serialises_after_an_error(self, handler):
@@ -151,5 +153,5 @@ class TestJsonRpcHandlerErrors:
         first = ujson.loads(await handler.dispatch(self._eval_request("x+1")))
         second = ujson.loads(await handler.dispatch(self._eval_request("x+2")))
 
-        assert first["error"]["code"] == 504
+        assert first["error"]["code"] == 424
         assert second["result"] == {"is_correct": True}

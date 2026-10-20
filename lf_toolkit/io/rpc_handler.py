@@ -32,11 +32,11 @@ def jsonrpc_handler(handler: Handler, name: Command):
         try:
             result = await handler.handle(name, {"params": req})
             return Success(result)
-        # Pass only the message: the exception object is not JSON
+        # Pass only strings: the exception object is not JSON
         # serializable, so sending it as `data` makes serializing the
         # error response raise, which tears down the serve loop.
         except EvaluationFunctionError as e:
-            return Error(e.rpc_code, str(e))
+            return Error(e.rpc_code, str(e), {"code": e.file_code})
         except Exception as e:
             return Error(0, str(e))
 

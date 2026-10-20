@@ -106,9 +106,11 @@ Raise one of these from a handler to report an error with its own code. The mess
 | Raise | JSON-RPC code (stdio/IPC) | File IO `error.code` | Use when |
 |---|---|---|---|
 | `InvalidSubmissionError` | 422 | `INVALID_SUBMISSION` | the submitted response can't be processed |
-| `UpstreamTimeoutError` | 504 | `UPSTREAM_TIMEOUT` | a service the function depends on did not answer in time (retryable) |
-| `UpstreamUnavailableError` | 503 | `UPSTREAM_UNAVAILABLE` | a service the function depends on refused or failed (retryable) |
+| `UpstreamTimeoutError` | 424 | `UPSTREAM_TIMEOUT` | a service the function depends on did not answer in time (retryable) |
+| `UpstreamUnavailableError` | 424 | `UPSTREAM_UNAVAILABLE` | a service the function depends on refused or failed (retryable) |
 | `EvaluationFunctionError` | 500 | `INTERNAL_ERROR` | any other error the function chooses to report |
+
+Upstream failures use 424 (Failed Dependency) rather than 5xx, because the evaluation function itself is working; 5xx is kept for errors in the function. Over JSON-RPC the File IO code is also sent as the error's `data` (`{"code": "UPSTREAM_TIMEOUT"}`), which tells the two 424s apart.
 
 ```python
 from lf_toolkit import UpstreamTimeoutError
